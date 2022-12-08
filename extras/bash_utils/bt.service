@@ -1,0 +1,15 @@
+[Unit]
+Description=Bluetooth Inverter Watch Power
+After=network-online.target
+Wants=bluetooth.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+StandardOutput=journal
+ExecStart=/bin/rgm/bt
+WorkingDirectory=/bin/rgm
+
+[Install]
+WantedBy=multi-user.target
