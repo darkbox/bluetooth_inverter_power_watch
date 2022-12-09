@@ -55,9 +55,9 @@ impl BTInterface {
             let low = NaiveTime::from_hms_opt(7, 15, 0).unwrap();
             let high = NaiveTime::from_hms_opt(23, 15, 0).unwrap();
             let time_of_day = Local::now().time();
-            let mut current_period: u64 = period;
+            let mut current_period: u64 = night_period;
             if (time_of_day > low) && (time_of_day < high) {
-                current_period = night_period;
+                current_period = period;
             }
 
             if current_period > 0 {
