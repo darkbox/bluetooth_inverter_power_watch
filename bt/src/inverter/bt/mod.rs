@@ -1,5 +1,6 @@
 use crate::inverter::InverterData;
-use bluer::{Adapter, AdapterEvent, Address};
+use bluer::agent::{AgentHandle, ReqResult, RequestPasskey};
+use bluer::{agent::Agent, Adapter, AdapterEvent, Address};
 use chrono::{Local, NaiveTime};
 use futures::prelude::*;
 use futures::{pin_mut, StreamExt};
@@ -41,7 +42,7 @@ impl BTInterface {
     #[allow(dead_code)]
     pub fn new(target_device: Address, influx_data: InfluxData) -> Self {
         BTInterface {
-            target_device: target_device,
+            target_device,
             data: RefCell::new(InverterData::new()),
             influx_data,
         }
@@ -133,13 +134,38 @@ impl BTInterface {
         }
     }
 
+    pub async fn request_passkey(_req: RequestPasskey) -> ReqResult<u32> {
+        println!("Requesting passkey...");
+        let device_pin_code =
+            std::env::var("INVERTER_BT_PASSKEY").expect("INVERTER_BT_PASSKEY must be set.");
+        let device_pin_code: u32 = device_pin_code.parse::<u32>().unwrap_or(123456);
+        Ok(device_pin_code)
+    }
+
     async fn scan_and_query_once(&self) -> bluer::Result<()> {
         let session = bluer::Session::new().await?;
+
+        // Register custom agent to handle the authentication
+        let agent = Agent {
+            request_default: true,
+            request_passkey: Some(Box::new(|req| Box::pin(BTInterface::request_passkey(req)))),
+            ..Default::default()
+        };
+
+        #[allow(unused_variables)]
+        let agent_handle: AgentHandle;
+        if let Ok(handle) = session.register_agent(agent).await {
+            agent_handle = handle;
+            println!("Custom agent registered: {:?}", agent_handle);
+        } else {
+            println!("Error: Custom agent could not be registered.");
+        }
+
         let adapter = session.default_adapter().await?;
-        // println!(
-        //     "Discovering devices using Bluetooth adapater {}",
-        //     adapter.name()
-        // );
+        println!(
+            "Discovering devices using Bluetooth adapter {}",
+            adapter.name()
+        );
         adapter.set_powered(true).await?;
 
         let device_events = adapter.discover_devices().await?;
@@ -175,15 +201,34 @@ impl BTInterface {
 
     async fn query_device(&self, adapter: &Adapter, addr: Address) -> bluer::Result<()> {
         let device = adapter.device(addr)?;
-        for service in device.services().await? {
-            self.data.borrow_mut().read_characteristics(service).await?;
-        }
+        device.set_trusted(true).await?;
 
         // println!("    Address type:       {}", device.address_type().await?);
         // println!("    Name:               {:?}", device.name().await?);
         // println!("    Paired:             {:?}", device.is_paired().await?);
         // println!("    Connected:          {:?}", device.is_connected().await?);
         // println!("    Trusted:            {:?}", device.is_trusted().await?);
+
+        match device.is_paired().await {
+            Ok(is_paired) => {
+                if !is_paired {
+                    // println!("Trying to pair device...");
+                    device.pair().await?;
+                    device.connect().await?;
+                } else {
+                    // println!("Connecting...");
+                    device.connect().await?;
+                }
+            }
+            Err(err) => {
+                println!("    Error: {}", &err);
+            }
+        };
+
+        for service in device.services().await? {
+            self.data.borrow_mut().read_characteristics(service).await?;
+        }
+
         // self.data.print_inverter_info();
         // self.data.print_battery_info();
         // self.data.print_basic_info();

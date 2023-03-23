@@ -5,6 +5,8 @@ use inverter::bt::{BTInterface, InfluxData};
 
 #[tokio::main]
 async fn main() {
+    println!("Starting bluetooth power watch...");
+
     dotenv().ok();
     let influxdb2_host = std::env::var("INFLUXDB2_HOST").expect("INFLUXDB2_HOST must be set.");
     let influxdb2_org = std::env::var("INFLUXDB2_ORG").expect("INFLUXDB2_ORG must be set.");
@@ -34,5 +36,12 @@ async fn main() {
     );
 
     let bt_interface = BTInterface::new(Address::new(device_address), influx_data);
-    let _ = bt_interface.serve(bt_period, bt_night_period).await;
+    let _ = bt_interface
+        .serve(bt_period, bt_night_period)
+        .await
+        .map_err(|e| {
+            println!("Error: {} {}", e.kind.to_string(), e.message);
+        });
+
+    println!("Bluetooth power watch closed.");
 }
