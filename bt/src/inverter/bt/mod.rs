@@ -34,6 +34,7 @@ pub struct BTInterface {
     target_device: Address,
     data: RefCell<InverterData>,
     influx_data: InfluxData,
+    listener: Option<fn(data: InverterData)>,
 }
 
 unsafe impl Sync for BTInterface {}
@@ -45,13 +46,20 @@ impl BTInterface {
             target_device,
             data: RefCell::new(InverterData::new()),
             influx_data,
+            listener: None,
         }
     }
 
-    pub async fn serve(&self, period: u64, night_period: u64) -> bluer::Result<()> {
+    pub async fn serve(&self, period: u64, night_period: u64) {
         loop {
-            self.scan_and_query_once().await?;
+            let _ = self.scan_and_query_once().await.map_err(|e| {
+                println!("Error: {} {}", e.kind.to_string(), e.message);
+            });
             self.save_to_db().await;
+
+            if let Some(data) = self.get_data() {
+                self.emit(data);
+            }
 
             let low = NaiveTime::from_hms_opt(7, 15, 0).unwrap();
             let high = NaiveTime::from_hms_opt(23, 15, 0).unwrap();
@@ -64,6 +72,16 @@ impl BTInterface {
             if current_period > 0 {
                 sleep(Duration::from_secs(current_period)).await;
             }
+        }
+    }
+
+    pub fn connect(&mut self, listener: fn(data: InverterData)) {
+        self.listener = Some(listener);
+    }
+
+    fn emit(&self, data: InverterData) {
+        if let Some(listener) = self.listener {
+            listener(data);
         }
     }
 

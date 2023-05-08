@@ -1,6 +1,6 @@
 [package]
 name = "bt"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -17,9 +17,10 @@ bluer = { version = "0.15", features = ["full"] }
 tokio = { version = "1.20.1", features = ["full"]}
 futures = "0.3.23"
 uuid = { version = "1", features = ["v4"] }
-influxdb2 = "0.3"
+influxdb2 = "0.4"
 influxdb2-structmap = "0.2"
 num-traits = "0.2"
 chrono = "0.4"
 dotenv = "0.15.0"
 hex = "0.4.3"
+actix-web = "4"

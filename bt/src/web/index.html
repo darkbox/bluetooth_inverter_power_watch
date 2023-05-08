@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluetooth Inverter Power Watch</title>
+    <link rel="shortcut icon"
+        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAwnpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjabVBbDsMgDPvnFDsCxAHCcejWSbvBjr9A0qpss4TzMDIhYX+/nuE2QIkD5yqllRIV3LhR10SioU9OkSdPsEtaL/1wCqQtaISVUvz+0U+ngYWuWb4Yyd2FbRWav0DyZUQWMCYa+cONmhuBTEhu0O1bsTSp1y9se1whdsIglnXsn7rq9h5Z3wHRjoSoDLANgHEQ0DXJk4teTKiaYzJD3EwX8m9PB8IH4I9ZHKkQzdYAAAGEaUNDUElDQyBwcm9maWxlAAB4nH2RPUjDQBzFX1Nri1Q62EHEIUPrZBcVcaxVKEKFUCu06mBy6Rc0sSQpLo6Ca8HBj8Wqg4uzrg6ugiD4AeLq4qToIiX+Lym0iPHguB/v7j3u3gFCq8Y0sy8JaLplZNMpMV9YEYOvCKAfEcQRkplZn5WkDDzH1z18fL1L8Czvc3+OQbVoMsAnEidZ3bCI14mnN606533iKKvIKvE58bhBFyR+5Lri8hvnssMCz4wauewccZRYLPew0sOsYmjEU8QxVdMpX8i7rHLe4qzVGqxzT/7CcFFfXuI6zVGksYBFSBChoIEqarCQoFUnxUSW9lMe/hHHL5FLIVcVjBzz2IAG2fGD/8Hvbs3S5ISbFE4BgRfb/ogDwV2g3bTt72Pbbp8A/mfgSu/6N1rAzCfpza4WOwIi28DFdVdT9oDLHWD4qS4bsiP5aQqlEvB+Rt9UAIZugYFVt7fOPk4fgBx1lbkBDg6BsTJlr3m8O9Tb279nOv39AEyhcpfPBXIVAAANeGlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNC40LjAtRXhpdjIiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iCiAgICB4bWxuczpzdEV2dD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlRXZlbnQjIgogICAgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIgogICAgeG1sbnM6R0lNUD0iaHR0cDovL3d3dy5naW1wLm9yZy94bXAvIgogICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iCiAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgIHhtcE1NOkRvY3VtZW50SUQ9ImdpbXA6ZG9jaWQ6Z2ltcDpjYjUxNWY1MS1iZjAzLTRlOWMtYWMzMi01Mjg4ZjE4MTVmMzUiCiAgIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6ODYxMWE0ZmYtYjA4NC00ZjVmLWFhNmItNTk3NDc2MTMxY2JlIgogICB4bXBNTTpPcmlnaW5hbERvY3VtZW50SUQ9InhtcC5kaWQ6NDMwZWMwZWQtYmI0Mi00OGE4LWJiMDMtNTdlMDc0MmQ2ODBmIgogICBkYzpGb3JtYXQ9ImltYWdlL3BuZyIKICAgR0lNUDpBUEk9IjIuMCIKICAgR0lNUDpQbGF0Zm9ybT0iTGludXgiCiAgIEdJTVA6VGltZVN0YW1wPSIxNjgzMzg3NDY4MzQwMDUxIgogICBHSU1QOlZlcnNpb249IjIuMTAuMzQiCiAgIHRpZmY6T3JpZW50YXRpb249IjEiCiAgIHhtcDpDcmVhdG9yVG9vbD0iR0lNUCAyLjEwIgogICB4bXA6TWV0YWRhdGFEYXRlPSIyMDIzOjA1OjA2VDE3OjM3OjQ4KzAyOjAwIgogICB4bXA6TW9kaWZ5RGF0ZT0iMjAyMzowNTowNlQxNzozNzo0OCswMjowMCI+CiAgIDx4bXBNTTpIaXN0b3J5PgogICAgPHJkZjpTZXE+CiAgICAgPHJkZjpsaQogICAgICBzdEV2dDphY3Rpb249InNhdmVkIgogICAgICBzdEV2dDpjaGFuZ2VkPSIvIgogICAgICBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOjQzYTE4YzBjLWFmY2EtNDVkZC1hNzkzLTk1NjllOGExNTY0NyIKICAgICAgc3RFdnQ6c29mdHdhcmVBZ2VudD0iR2ltcCAyLjEwIChMaW51eCkiCiAgICAgIHN0RXZ0OndoZW49IjIwMjMtMDUtMDZUMTc6Mzc6NDgrMDI6MDAiLz4KICAgIDwvcmRmOlNlcT4KICAgPC94bXBNTTpIaXN0b3J5PgogIDwvcmRmOkRlc2NyaXB0aW9uPgogPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgIAo8P3hwYWNrZXQgZW5kPSJ3Ij8+Rb/O9QAAAAZiS0dEAAAAAAAA+UO7fwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB+cFBg8lMO9o9kAAAAIjSURBVHja7VqxTsMwEL0zkRibL6ATI7Ag5QuyIiE2/qEjX8HYf2BDSIytGNhZmJlYYWlHpMIxOIlIKSJO7ly7vpOiNJZiX3zvvTu7BlBTS9rQ41gUom9GEeAp4ot32zIadXRs34+vJlgCRIiAdsTf7L1rxLeFCBMBlUTHRK7Ic0fcAREYhwbsWBZAAPjaRuS5kZA8AsKdgOzGXmlXgiROZ+zrlTfu1yhYXYpoQRY+S2VLyPARIJwNks8CWd/Ie7e9K3v/vN7s3EeDBHJBQmQIwK32uBEBoWhAXy3QStD1heXSXv1V595eXdvTrgTDygIDR6qiuzprP9e23l4/KwLCySsEAPD60lb//7LA7Z0F2cX5ysmxvu9pFhDUAAMAMD60O0HrSAgo/xupCaBIgiq+iUAAAM9P9uH4iJfTvri/UxpAnjTg5wzjyWl7V3jd/tKGOsJC3Heei13KAuQLAb/WBi6rw64aoGsBT2kpGzA2VnVBKyssKkSMD2TrBP1vMKDVYJMVEAEeH7AKCUlH3nAMYjjpSGR/UTwSIHKwQfr7WX1WDZDqeDKZsPY3nU61DogKAXmeRzEB3AjwcVoMQ+2MAADKshT9+vl8zuo7OwUQMW0NKIpC1OHZbKZZIHTREtECbu6Lp8FYtEBsAri1gJv7qgHChUtzlrgsy950ICIx7ksjgDi0wIeOiG/BDtUCKe6rBnhavDRaMDBIlDICCNTU1KTsGwUJh/hLurQNAAAAAElFTkSuQmCC"
+        type="image/x-icon">
+    <style>
+        :root {
+            --color-fg: #f9a72c;
+            --color-bg: black;
+        }
+
+        * {
+            font-family: monospace;
+            font-size: 18px;
+            outline-color: var(--color-fg);
+            border-color: var(--color-fg);
+            border-width: 0.3rem;
+        }
+
+        html,
+        body {
+            color: var(--color-fg);
+            background-color: var(--color-bg);
+            user-select: none;
+            padding: 0.5rem;
+            margin: 0;
+        }
+
+        header {
+            color: var(--color-bg);
+            background-color: var(--color-fg);
+            padding: 0.5rem 1rem;
+            margin-bottom: 1rem;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        ul>li {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        fieldset {
+            border-style: solid;
+        }
+
+        .uppercase,
+        legend {
+            text-transform: uppercase;
+        }
+
+        .bold,
+        legend {
+            font-weight: bold;
+        }
+
+        dialog {
+            color: var(--color-bg);
+            background-color: var(--color-fg);
+            padding: 2rem;
+        }
+
+        .blocks {
+            display: flex;
+            gap: 1rem;
+            flex-direction: column;
+        }
+
+        @media screen and (min-width:1200px) {
+            .blocks {
+                flex-direction: row;
+                justify-content: space-evenly;
+            }
+
+            .blocks>* {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body id="app">
+
+    <header style="display:flex;gap:1rem;justify-content: space-between;">
+        <h1>BT POWER WATCH v0.1.3</h1>
+        <div style="display:flex;flex-direction: column;text-align: right;">
+            <span id="local-date"></span>
+            <span id="local-time"></span>
+        </div>
+    </header>
+
+    <div class="blocks">
+        <fieldset>
+            <legend>Inversor</legend>
+            <ul>
+                <li>
+                    <h3 class="uppercase">Versión CPU</h3><span data-field="cpu_version"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Versión Bluetooth</h3><span data-field="blt_version"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Modelo</h3>
+                    <span data-field="model_type"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Potencia nominal activa</h3>
+                    <span data-field="nominal_output_active_power" data-unit="W"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Topología</h3>
+                    <span data-field="topology"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Carga</h3>
+                    <span data-field="load_percentage" data-unit="%"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Modo salida</h3>
+                    <span data-field="output_mode"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Frequencia salida (Real/Configurada)</h3>
+                    <span data-field="output_frequency" data-unit="Hz"></span>
+                    <span data-field="p_output_frequency" data-unit="Hz"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Voltaje salida (Real/Configurada)</h3>
+                    <span data-field="output_voltage" data-unit="V"></span>
+                    <span data-field="p_output_voltage" data-unit="V"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Potencia salida (Aparente/Nominal)</h3>
+                    <span data-field="output_apparent_power" data-unit="W"></span>
+                    <span data-field="output_active_power" data-unit="W"></span>
+                </li>
+            </ul>
+        </fieldset>
+        <fieldset>
+            <legend>Baterías</legend>
+            <ul>
+                <li>
+                    <h3 class="uppercase">Capacidad</h3>
+                    <span data-field="battery_capacity" data-unit="%"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Voltaje</h3>
+                    <span data-field="battery_voltage" data-unit="V"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Carga</h3>
+                    <span data-field="battery_charge_current" data-unit="A"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Descarga</h3>
+                    <span data-field="battery_current_discharge" data-unit="A"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Tipo</h3>
+                    <span data-field="p_battery_type" data-unit=""></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Modo funcionamiento</h3>
+                    <span data-field="workmode"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Fuente de carga</h3>
+                    <span data-field="p_charger_source_priority"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Modo de carga</h3>
+                    <span data-field="charge_mode"></span>
+                </li>
+            </ul>
+        </fieldset>
+        <fieldset>
+            <legend>Entrada Paneles Solares</legend>
+            <ul>
+                <li>
+                    <h3 class="uppercase">Voltaje</h3>
+                    <span data-field="pv_input_voltage_stage1" data-unit="V"></span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Potencia</h3>
+                    <span data-field="pv_input_power_stage1" data-unit="W"></span>
+                </li>
+            </ul>
+        </fieldset>
+    </div>
+
+    <dialog id="error-dialog">
+        <h1>ERROR COMUNICACIÓN</h1>
+    </dialog>
+
+    <script>
+        const App = function (id) {
+            let inverterData = JSON.parse('{"model_type":0,"topology":"","cpu_version":"","blt_version":"","ac_voltage":0.0,"ac_frequency":0.0,"pv_input_voltage_stage1":0.0,"pv_input_power_stage1":0,"pv_input_voltage_stage2":0.0,"pv_input_power_stage2":0,"pv_input_voltage_stage3":0.0,"pv_input_power_stage3":0,"pv_input_voltage_stage4":0.0,"pv_input_power_stage4":0,"output_voltage":0.0,"output_frequency":0.0,"output_apparent_power":0,"output_active_power":0,"load_percentage":0,"output_mode":0,"charge_mode":0,"bulk_charge":0,"watts_unkown_01":0,"unkown_02":0.0,"unkown_03":0,"nominal_ac_voltage":0.0,"nominal_ac_current":0.0,"rated_battery_voltage":0.0,"nominal_output_voltage":0.0,"nominal_output_frequency":0.0,"nominal_output_apparent_power":0,"nominal_output_active_power":0,"workmode":"","battery_voltage":0.0,"battery_capacity":0,"battery_charge_current":0,"battery_current_discharge":0,"p_bulk_charging_voltage":0.0,"p_float_charging_voltage":0.0,"p_battery_cutoff_voltage":0.0,"p_battery_equalization_enable":false,"p_rt_activate_battery_equalization":false,"p_equalization_time":0,"p_equalization_period":0,"p_equalization_timeout":0,"p_equalization_voltage":0.0,"p_buzzer_alarm":false,"p_backlight":false,"p_overload_auto_restart":false,"p_overtemp_auto_restart":false,"p_beeps_while_primary_source_interrupt":false,"p_overload_bypass":false,"p_lcd_to_default_after_one_min":false,"p_fault_code_record":false,"p_charger_source_priority":0,"p_output_source_priotrity":0,"p_ac_input_range":0,"p_battery_type":0,"p_output_frequency":0.0,"p_output_voltage":0,"p_back_to_grid_voltage":0.0,"p_max_charging_current":0,"p_max_ac_charging_current":0,"p_back_to_discharge_voltage":0.0}');
+            const app = document.getElementById(id);
+            const bindings = app.querySelectorAll('[data-field]') || [];
+            const parseField = {
+                model_type: (value) => {
+                    switch (parseInt(value)) {
+                        case 0: return "Grid tie";
+                        case 1: return "Off grid";
+                    }
+
+                    return 'Hybrid';
+                },
+                p_battery_type: (value) => {
+                    switch (parseInt(value)) {
+                        case 0: return "AGM";
+                        case 1: return "Flooded";
+                        case 2: return "User define";
+                        case 3: return "Pylon";
+                        case 4: return "WECO";
+                        case 5: return "Other Li battery";
+                    }
+                    return 'Other Li battery';
+                },
+                p_charger_source_priority: (value) => {
+                    switch (parseInt(value)) {
+                        case 0: return "Utility first";
+                        case 1: return "Solar first";
+                        case 2: return "Utility and Solar";
+                        case 3: return "Only Solar Charging";
+                    }
+                    return 'Only Solar Charging';
+                },
+                p_ac_input_range: (value) => {
+                    switch (parseInt(value)) {
+                        case 0: return "Appliance";
+                    }
+                    return "UPS";
+                },
+                p_output_source_priotrity: (value) => {
+                    switch (parseInt(value)) {
+                        case 0: return "USB Priority";
+                        case 1: return "SUB Priority";
+                        case 2: return "SBU Priority";
+                    }
+                    return "SBU Priority";
+                },
+                output_mode: (value) => {
+                    switch (parseInt(value)) {
+                        case 0: return "Single machine output";
+                        case 1: return "Parallel output";
+                        case 2: return "Phase 1 of 3 Phase output";
+                        case 3: return "Phase 2 of 3 Phase output";
+                        case 4: return "Phase 3 of 3 Phase output";
+                    }
+                    return "Phase 3 of 3 Phase output";
+                },
+                charge_mode: (value) => {
+                    switch (parseInt(value)) {
+                        case 0: return "Auto";
+                        case 1: return "2-stage";
+                        case 2: return "3-stage";
+                    }
+                    return "3-stage";
+                },
+            };
+            const errorDialog = document.getElementById('error-dialog');
+
+            function showErrorDialog() {
+                if (errorDialog) {
+                    errorDialog.showModal();
+                }
+            }
+
+            function hideErrorDialog() {
+                if (errorDialog) {
+                    errorDialog.close();
+                }
+            }
+
+            function refreshView() {
+                bindings.forEach(field => {
+                    const dataField = field.dataset.field;
+                    const dataUnit = field.dataset.unit || '';
+                    if (Object.hasOwn(inverterData, dataField)) {
+                        let value = inverterData[dataField];
+                        if (Object.hasOwn(parseField, dataField)) {
+                            value = parseField[dataField](value);
+                        }
+                        if (typeof (value) === "number" && value % 1 != 0) {
+                            // Has decimal places
+                            value = value.toFixed(2);
+                        }
+                        field.innerHTML = `${value}<sub>${dataUnit}</sub>`;
+                    } else {
+                        console.warn(`"${dataField}" not found!`);
+                    }
+                });
+            }
+
+            function requestData() {
+                const request = new Request("/api/info", {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json",
+                    },
+                });
+                fetch(request).then((response) => { return response.json(); }).then((json) => {
+                    if (Object.hasOwn(json, 'cpu_version')) {
+                        inverterData = json;
+                        hideErrorDialog();
+                    } else {
+                        console.error('Invalid json object');
+                        showErrorDialog();
+                    }
+                }).catch((reason) => {
+                    console.error(reason);
+                    showErrorDialog();
+                });
+            }
+
+            // Initalization
+            requestData();
+            refreshView();
+            setInterval(refreshView, 300);
+            setInterval(requestData, 1000);
+        };
+        App('app');
+
+        // Header local datetime
+        (function () {
+            const dateElement = document.getElementById('local-date');
+            const timeElement = document.getElementById('local-time');
+            setInterval(() => {
+                const now = new Date();
+                dateElement.innerHTML = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+                timeElement.innerHTML = `${now.getHours()}:${now.getMinutes()}.${now.getSeconds()}`;
+            }, 100);
+        })();
+    </script>
+</body>
+
+</html>
