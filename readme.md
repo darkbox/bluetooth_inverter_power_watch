@@ -1,6 +1,6 @@
 # Bluetooth Inverter Watch
 After some reverse engineering I manage to decode and present the stats in order to monitor an *Axpert VM III* inverter using the Bluetooth connection.
-Why using Bluetooth instead of the USB serial connection? you may ask. Well is simple my control panel from the inverter burnout after several months using the serial connection. So after the long RMA process to get back and running the inverter I decided to not take any risks. No cables, no voltage picks, no fuses burnt or anything weird can happen :).
+Why using Bluetooth instead of the USB serial connection? you may ask. Well, is simple my control panel from the inverter burnout after several months using the serial connection. So after the long RMA process to get back and running the inverter I decided to not take any risks. No cables, no voltage picks, no fuses burnt or anything weird can happen :).
 
 # Get started
 ## Connect to the inverter
@@ -43,7 +43,7 @@ WEB_SERVER_PORT=9999
 **NOTE:** The periods are in seconds.
 
 ### Standalone web server
-An web server will be deployed to access some of the inverter's current data directly from the browser at `http://localhost:9999` or the port you have configured in the `.env` file.
+A web server will be deployed to access some of the inverter's current data directly from the browser at `http://localhost:9999` or the port you have configured in the `.env` file.
 ![](Screenshot_002.png)
 
 ### Influxdb2
