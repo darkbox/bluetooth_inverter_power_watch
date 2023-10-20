@@ -101,7 +101,7 @@
 <body id="app">
 
     <header style="display:flex;gap:1rem;justify-content: space-between;">
-        <h1>BT POWER WATCH v0.1.4</h1>
+        <h1>BT POWER WATCH v0.1.5</h1>
         <div style="display:flex;flex-direction: column;text-align: right;">
             <span id="local-date"></span>
             <span id="local-time"></span>
@@ -200,6 +200,10 @@
                     <span data-field="pv_input_voltage_stage1" data-unit="V"></span>
                 </li>
                 <li>
+                    <h3 class="uppercase">Amperios</h3>
+                    <span data-field="pv_input_current_stage1" data-unit="A"></span>
+                </li>
+                <li>
                     <h3 class="uppercase">Potencia</h3>
                     <span data-field="pv_input_power_stage1" data-unit="W"></span>
                 </li>
@@ -213,7 +217,7 @@
 
     <script>
         const App = function (id) {
-            let inverterData = JSON.parse('{"model_type":0,"topology":"","cpu_version":"","blt_version":"","ac_voltage":0.0,"ac_frequency":0.0,"pv_input_voltage_stage1":0.0,"pv_input_power_stage1":0,"pv_input_voltage_stage2":0.0,"pv_input_power_stage2":0,"pv_input_voltage_stage3":0.0,"pv_input_power_stage3":0,"pv_input_voltage_stage4":0.0,"pv_input_power_stage4":0,"output_voltage":0.0,"output_frequency":0.0,"output_apparent_power":0,"output_active_power":0,"load_percentage":0,"output_mode":0,"charge_mode":0,"bulk_charge":0,"watts_unkown_01":0,"unkown_02":0.0,"unkown_03":0,"nominal_ac_voltage":0.0,"nominal_ac_current":0.0,"rated_battery_voltage":0.0,"nominal_output_voltage":0.0,"nominal_output_frequency":0.0,"nominal_output_apparent_power":0,"nominal_output_active_power":0,"workmode":"","battery_voltage":0.0,"battery_capacity":0,"battery_charge_current":0,"battery_current_discharge":0,"p_bulk_charging_voltage":0.0,"p_float_charging_voltage":0.0,"p_battery_cutoff_voltage":0.0,"p_battery_equalization_enable":false,"p_rt_activate_battery_equalization":false,"p_equalization_time":0,"p_equalization_period":0,"p_equalization_timeout":0,"p_equalization_voltage":0.0,"p_buzzer_alarm":false,"p_backlight":false,"p_overload_auto_restart":false,"p_overtemp_auto_restart":false,"p_beeps_while_primary_source_interrupt":false,"p_overload_bypass":false,"p_lcd_to_default_after_one_min":false,"p_fault_code_record":false,"p_charger_source_priority":0,"p_output_source_priotrity":0,"p_ac_input_range":0,"p_battery_type":0,"p_output_frequency":0.0,"p_output_voltage":0,"p_back_to_grid_voltage":0.0,"p_max_charging_current":0,"p_max_ac_charging_current":0,"p_back_to_discharge_voltage":0.0}');
+            let inverterData = JSON.parse('{"model_type":0,"topology":"","cpu_version":"","blt_version":"","ac_voltage":0.0,"ac_frequency":0.0,"pv_input_voltage_stage1":0.0,"pv_input_current_stage1":0.0,"pv_input_power_stage1":0,"pv_input_voltage_stage2":0.0,"pv_input_power_stage2":0,"pv_input_voltage_stage3":0.0,"pv_input_power_stage3":0,"pv_input_voltage_stage4":0.0,"pv_input_power_stage4":0,"output_voltage":0.0,"output_frequency":0.0,"output_apparent_power":0,"output_active_power":0,"load_percentage":0,"output_mode":0,"charge_mode":0,"bulk_charge":0,"watts_unkown_01":0,"unkown_02":0.0,"unkown_03":0,"nominal_ac_voltage":0.0,"nominal_ac_current":0.0,"rated_battery_voltage":0.0,"nominal_output_voltage":0.0,"nominal_output_frequency":0.0,"nominal_output_apparent_power":0,"nominal_output_active_power":0,"workmode":"","battery_voltage":0.0,"battery_capacity":0,"battery_charge_current":0,"battery_current_discharge":0,"p_bulk_charging_voltage":0.0,"p_float_charging_voltage":0.0,"p_battery_cutoff_voltage":0.0,"p_battery_equalization_enable":false,"p_rt_activate_battery_equalization":false,"p_equalization_time":0,"p_equalization_period":0,"p_equalization_timeout":0,"p_equalization_voltage":0.0,"p_buzzer_alarm":false,"p_backlight":false,"p_overload_auto_restart":false,"p_overtemp_auto_restart":false,"p_beeps_while_primary_source_interrupt":false,"p_overload_bypass":false,"p_lcd_to_default_after_one_min":false,"p_fault_code_record":false,"p_charger_source_priority":0,"p_output_source_priotrity":0,"p_ac_input_range":0,"p_battery_type":0,"p_output_frequency":0.0,"p_output_voltage":0,"p_back_to_grid_voltage":0.0,"p_max_charging_current":0,"p_max_ac_charging_current":0,"p_back_to_discharge_voltage":0.0}');
             const app = document.getElementById(id);
             const bindings = app.querySelectorAll('[data-field]') || [];
             const parseField = {
@@ -312,6 +316,12 @@
                 });
             }
 
+            function calculateCurrent(voltage, watts) {
+                voltage = +voltage;
+                watts = +watts;
+                return watts > 0 ? voltage / watts : 0;
+            }
+
             function requestData() {
                 const request = new Request("/api/info", {
                     method: "GET",
@@ -322,6 +332,12 @@
                 fetch(request).then((response) => { return response.json(); }).then((json) => {
                     if (Object.hasOwn(json, 'cpu_version')) {
                         inverterData = json;
+
+                        // Add virtual field
+                        if (Object.hasOwn(inverterData, 'pv_input_voltage_stage1') && Object.hasOwn(inverterData, 'pv_input_power_stage1')) {
+                            inverterData.pv_input_current_stage1 = calculateCurrent(inverterData.pv_input_voltage_stage1, inverterData.pv_input_power_stage1);
+                        }
+
                         hideErrorDialog();
                     } else {
                         console.error('Invalid json object');
