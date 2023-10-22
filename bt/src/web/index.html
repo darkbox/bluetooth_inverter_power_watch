@@ -319,7 +319,7 @@
             function calculateCurrent(voltage, watts) {
                 voltage = +voltage;
                 watts = +watts;
-                return watts > 0 ? voltage / watts : 0;
+                return voltage > 0 ? watts / voltage : 0;
             }
 
             function requestData() {
