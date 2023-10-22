@@ -1,7 +1,7 @@
 mod inverter;
 use actix_web::{get, rt, App, HttpResponse, HttpServer, Responder};
 use bluer::Address;
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use inverter::{
     bt::{BTInterface, InfluxData},
     InverterData,
@@ -15,7 +15,7 @@ static mut SHARED_BUFFER: Option<InverterData> = None;
 async fn main() {
     println!("Starting bluetooth power watch...");
 
-    dotenv().ok();
+    dotenv().expect(".env file not found.");
     let influxdb2_host = std::env::var("INFLUXDB2_HOST").expect("INFLUXDB2_HOST must be set.");
     let influxdb2_org = std::env::var("INFLUXDB2_ORG").expect("INFLUXDB2_ORG must be set.");
     let influxdb2_bucket =
