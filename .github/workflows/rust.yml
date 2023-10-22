@@ -19,6 +19,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Install libdbus-1-dev
+      run: sudo apt install libdbus-1-dev pkg-config
     - name: Build
       run: cargo build --all --release && strip target/release/PROJECT_NAME && mv target/release/$PROJECT_NAME target/release/PROJECT_NAME_amd64
     - name: Run tests
