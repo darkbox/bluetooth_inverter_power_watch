@@ -1,6 +1,6 @@
 [package]
 name = "bt"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -13,7 +13,7 @@ incremental = true
 openssl = { version = "0.10", features = ["vendored"] }
 serde = "1.0.148"
 serde_json = "1.0.89"
-bluer = { version = "0.15", features = ["full"] }
+bluer = { version = "0.16.1", features = ["full"] }
 tokio = { version = "1.20.1", features = ["full"] }
 futures = "0.3.23"
 uuid = { version = "1", features = ["v4"] }
