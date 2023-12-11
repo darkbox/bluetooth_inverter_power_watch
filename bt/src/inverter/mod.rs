@@ -248,8 +248,8 @@ impl InverterData {
         );
     }
 
-    fn b_to_f32(bytes: [u8; 2]) -> f32 {
-        u16::from_le_bytes(bytes) as f32 * 0.1
+    fn b_to_f32(bytes: [u8; 2], factor: Option<f32>) -> f32 {
+        u16::from_le_bytes(bytes) as f32 * factor.unwrap_or(0.1)
     }
 
     fn parse_0x2a01(&mut self, bytes: Vec<u8>) {
@@ -263,14 +263,14 @@ impl InverterData {
     }
 
     fn parse_0x2a03(&mut self, bytes: Vec<u8>) {
-        self.ac_voltage = InverterData::b_to_f32([bytes[0], bytes[1]]);
-        self.ac_frequency = InverterData::b_to_f32([bytes[2], bytes[3]]);
-        self.output_voltage = InverterData::b_to_f32([bytes[4], bytes[5]]);
-        self.output_frequency = InverterData::b_to_f32([bytes[6], bytes[7]]);
+        self.ac_voltage = InverterData::b_to_f32([bytes[0], bytes[1]], None);
+        self.ac_frequency = InverterData::b_to_f32([bytes[2], bytes[3]], None);
+        self.output_voltage = InverterData::b_to_f32([bytes[4], bytes[5]], None);
+        self.output_frequency = InverterData::b_to_f32([bytes[6], bytes[7]], None);
         self.output_apparent_power = u16::from_le_bytes([bytes[8], bytes[9]]);
         self.output_active_power = u16::from_le_bytes([bytes[10], bytes[11]]);
         self.load_percentage = u16::from_le_bytes([bytes[12], bytes[13]]);
-        self.unkown_02 = InverterData::b_to_f32([bytes[14], bytes[15]]);
+        self.unkown_02 = InverterData::b_to_f32([bytes[14], bytes[15]], None);
         self.battery_voltage = u16::from_le_bytes([bytes[16], bytes[17]]) as f32 * 0.01;
         self.battery_charge_current = u16::from_le_bytes([bytes[18], bytes[19]]);
     }
@@ -300,27 +300,27 @@ impl InverterData {
 
     fn parse_0x2a05(&mut self, bytes: Vec<u8>) {
         self.model_type = bytes[16];
-        self.nominal_ac_voltage = InverterData::b_to_f32([bytes[0], bytes[1]]);
-        self.nominal_ac_current = InverterData::b_to_f32([bytes[8], bytes[9]]);
-        self.rated_battery_voltage = InverterData::b_to_f32([bytes[14], bytes[15]]);
-        self.nominal_output_voltage = InverterData::b_to_f32([bytes[4], bytes[5]]);
-        self.nominal_output_frequency = InverterData::b_to_f32([bytes[6], bytes[7]]);
+        self.nominal_ac_voltage = InverterData::b_to_f32([bytes[0], bytes[1]], None);
+        self.nominal_ac_current = InverterData::b_to_f32([bytes[8], bytes[9]], None);
+        self.rated_battery_voltage = InverterData::b_to_f32([bytes[14], bytes[15]], None);
+        self.nominal_output_voltage = InverterData::b_to_f32([bytes[4], bytes[5]], None);
+        self.nominal_output_frequency = InverterData::b_to_f32([bytes[6], bytes[7]], None);
         self.nominal_output_apparent_power = u16::from_le_bytes([bytes[10], bytes[11]]);
         self.nominal_output_active_power = u16::from_le_bytes([bytes[12], bytes[13]]);
     }
 
     fn parse_0x2a0c(&mut self, bytes: Vec<u8>) {
         self.p_output_voltage = u16::from_le_bytes([bytes[0], bytes[1]]);
-        self.p_output_frequency = InverterData::b_to_f32([bytes[2], bytes[3]]);
+        self.p_output_frequency = InverterData::b_to_f32([bytes[2], bytes[3]], None);
         self.p_max_charging_current = bytes[4] & 0xff;
         self.p_max_ac_charging_current = bytes[5] & 0xff;
-        self.p_back_to_grid_voltage = InverterData::b_to_f32([bytes[12], bytes[13]]);
+        self.p_back_to_grid_voltage = InverterData::b_to_f32([bytes[12], bytes[13]], None);
 
         // if p_back_to_discharge == 0.0 => "FULL"
-        self.p_back_to_discharge_voltage = InverterData::b_to_f32([bytes[14], bytes[15]]);
-        self.p_bulk_charging_voltage = InverterData::b_to_f32([bytes[8], bytes[9]]);
-        self.p_float_charging_voltage = InverterData::b_to_f32([bytes[6], bytes[7]]);
-        self.p_battery_cutoff_voltage = InverterData::b_to_f32([bytes[10], bytes[11]]);
+        self.p_back_to_discharge_voltage = InverterData::b_to_f32([bytes[14], bytes[15]], None);
+        self.p_bulk_charging_voltage = InverterData::b_to_f32([bytes[8], bytes[9]], None);
+        self.p_float_charging_voltage = InverterData::b_to_f32([bytes[6], bytes[7]], None);
+        self.p_battery_cutoff_voltage = InverterData::b_to_f32([bytes[10], bytes[11]], None);
         self.p_charger_source_priority = bytes[18];
         self.p_ac_input_range = bytes[16];
         self.p_output_source_priotrity = bytes[17];
@@ -368,27 +368,27 @@ impl InverterData {
         self.p_equalization_time = u16::from_le_bytes([bytes[6], bytes[7]]); // minutes
         self.p_equalization_period = u16::from_le_bytes([bytes[8], bytes[9]]); // days
         self.p_equalization_timeout = u16::from_le_bytes([bytes[12], bytes[13]]); // minutes
-        self.p_equalization_voltage = InverterData::b_to_f32([bytes[10], bytes[11]]);
+        self.p_equalization_voltage = InverterData::b_to_f32([bytes[10], bytes[11]], Some(0.01));
         // TODO self.p_rt_activate_battery_equalization = ; // Real-time activate battery equalization
     }
 
     fn parse_0x2a11(&mut self, bytes: Vec<u8>) {
-        self.pv_input_voltage_stage1 = InverterData::b_to_f32([bytes[12], bytes[13]]);
+        self.pv_input_voltage_stage1 = InverterData::b_to_f32([bytes[12], bytes[13]], None);
         self.pv_input_power_stage1 = u16::from_le_bytes([bytes[14], bytes[15]]);
     }
 
     fn parse_0x2a12(&mut self, bytes: Vec<u8>) {
-        self.pv_input_voltage_stage2 = InverterData::b_to_f32([bytes[12], bytes[13]]);
+        self.pv_input_voltage_stage2 = InverterData::b_to_f32([bytes[12], bytes[13]], None);
         self.pv_input_power_stage2 = u16::from_le_bytes([bytes[14], bytes[15]]);
     }
 
     fn parse_0x2a13(&mut self, bytes: Vec<u8>) {
-        self.pv_input_voltage_stage3 = InverterData::b_to_f32([bytes[12], bytes[13]]);
+        self.pv_input_voltage_stage3 = InverterData::b_to_f32([bytes[12], bytes[13]], None);
         self.pv_input_power_stage3 = u16::from_le_bytes([bytes[14], bytes[15]]);
     }
 
     fn parse_0x2a14(&mut self, bytes: Vec<u8>) {
-        self.pv_input_voltage_stage4 = InverterData::b_to_f32([bytes[12], bytes[13]]);
+        self.pv_input_voltage_stage4 = InverterData::b_to_f32([bytes[12], bytes[13]], None);
         self.pv_input_power_stage4 = u16::from_le_bytes([bytes[14], bytes[15]]);
     }
 
