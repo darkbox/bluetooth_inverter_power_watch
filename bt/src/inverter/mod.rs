@@ -1,8 +1,10 @@
 pub mod bt;
 
+use bit_array::BitArray;
 use bluer::gatt::remote::Service;
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
+use typenum::U8;
 
 const CHAR_UUID_0X2A01: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0100001000800000805f9b34fb);
 const CHAR_UUID_0X2A02: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0200001000800000805f9b34fb);
@@ -82,10 +84,13 @@ pub struct InverterData {
 
     // Parameters
     p_buzzer_alarm: bool,
+    p_feed_into_the_grid: bool,
     p_backlight: bool,
     p_overload_auto_restart: bool,
     p_overtemp_auto_restart: bool,
     p_beeps_while_primary_source_interrupt: bool,
+    p_must_be_connected_to_pv: u8,
+    p_solar_power_balance: u8,
     p_overload_bypass: bool,
     p_lcd_to_default_after_one_min: bool,
     p_fault_code_record: bool,
@@ -326,7 +331,45 @@ impl InverterData {
         self.output_mode = bytes[2];
         self.charge_mode = bytes[15];
         self.bulk_charge = i16::from_le_bytes([bytes[16], bytes[17]]);
-        // TODO there is more parameters here to extract
+
+        // Flags
+        let flags_01 = BitArray::<u32, U8>::from_bytes(&[bytes[0]]);
+        let flags_02 = BitArray::<u32, U8>::from_bytes(&[bytes[1]]);
+
+        let flag_01 = flags_02.get(7).unwrap_or_default();
+        let flag_02 = flags_01.get(1).unwrap_or_default();
+        let flag_03 = flags_01.get(5).unwrap_or_default();
+        let flag_04 = flags_01.get(3).unwrap_or_default();
+        let flag_05 = flags_01.get(4).unwrap_or_default();
+        let flag_06 = flags_01.get(6).unwrap_or_default();
+        let flag_29 = flags_02.get(6).unwrap_or_default();
+        let flag_30 = flags_01.get(0).unwrap_or_default();
+        let flag_31 = flags_01.get(2).unwrap_or_default();
+        let flag_32 = flags_01.get(7).unwrap_or_default();
+        let flag_21 = bytes[3];
+        let flag_22 = bytes[4];
+
+        /* TODO [flag_10 == 0 => No permited | flag_30 == 1 => Enabled | flag_30 == 0 => Disabled] */
+        // let flag_10 = flags_02.get(5).unwrap_or_default();
+
+        self.p_buzzer_alarm = flag_01; // Buzzer alarm
+        self.p_feed_into_the_grid = flag_02; // Feed into the grid
+        self.p_backlight = flag_03; // Backlight
+        self.p_overload_auto_restart = flag_04; // Overload auto restart
+        self.p_overtemp_auto_restart = flag_05; // Over temperature auto restart
+        self.p_beeps_while_primary_source_interrupt = flag_06; // Beeps while primary source interrupt
+        self.p_must_be_connected_to_pv = flag_21; // All inverters must connected to PV as PV OK
+        self.p_solar_power_balance = flag_22; // Solar power balance
+        self.p_battery_equalization_enable = flag_29; // Battery equalization setting
+        self.p_overload_bypass = flag_30; // Overload bypass
+        self.p_lcd_to_default_after_one_min = flag_31; // LCD screen returns to default display screen after 1 min.
+        self.p_fault_code_record = flag_32; // Fault code record
+
+        self.p_equalization_time = u16::from_le_bytes([bytes[6], bytes[7]]); // minutes
+        self.p_equalization_period = u16::from_le_bytes([bytes[8], bytes[9]]); // days
+        self.p_equalization_timeout = u16::from_le_bytes([bytes[12], bytes[13]]); // minutes
+        self.p_equalization_voltage = InverterData::b_to_f32([bytes[10], bytes[11]]);
+        // TODO self.p_rt_activate_battery_equalization = ; // Real-time activate battery equalization
     }
 
     fn parse_0x2a11(&mut self, bytes: Vec<u8>) {

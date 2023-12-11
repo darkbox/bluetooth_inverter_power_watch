@@ -283,6 +283,14 @@
             const app = document.getElementById(id);
             const bindings = app.querySelectorAll('[data-field]') || [];
             const parseField = {
+                topology: (value) => {
+                    // TODO
+                    switch (value) {
+                        case '': return "Transformer";
+                        case '?': return "Transformerless";
+                    }
+                    return value;
+                },
                 model_type: (value) => {
                     switch (parseInt(value)) {
                         case 0: return "Grid tie";
@@ -290,6 +298,21 @@
                     }
 
                     return 'Hybrid';
+                },
+                workmode: (value) => {
+                    switch (value) {
+                        case 'B': return "Battery";
+                        case 'C': return "Charge";
+                        case 'D': return "Shutdown";
+                        case 'E': return "ECO";
+                        case 'F': return "Fault";
+                        case 'H': return "Power saving";
+                        case 'L': return "Line";
+                        case 'P': return "Power on";
+                        case 'S': return "Stand by";
+                        case 'Y': return "Bypass";
+                    }
+                    return value + ' mode';
                 },
                 p_battery_type: (value) => {
                     switch (parseInt(value)) {
