@@ -7,6 +7,7 @@ Wants=bluetooth.target
 Type=simple
 Restart=always
 RestartSec=5
+TimeoutStopSec=2
 StandardOutput=journal
 ExecStart=/bin/rgm/bt
 WorkingDirectory=/bin/rgm
