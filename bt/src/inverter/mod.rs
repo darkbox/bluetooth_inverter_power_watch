@@ -11,20 +11,31 @@ const CHAR_UUID_0X2A02: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0200001000800
 const CHAR_UUID_0X2A03: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0300001000800000805f9b34fb);
 const CHAR_UUID_0X2A04: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0400001000800000805f9b34fb);
 const CHAR_UUID_0X2A05: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0500001000800000805f9b34fb);
-const CHAR_UUID_0X2A0C: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0c00001000800000805f9b34fb);
-const CHAR_UUID_0X2A0D: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0d00001000800000805f9b34fb);
+const CHAR_UUID_0X2A06: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0600001000800000805f9b34fb);
+const CHAR_UUID_0X2A07: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0700001000800000805f9b34fb);
+const CHAR_UUID_0X2A08: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0800001000800000805f9b34fb);
+const CHAR_UUID_0X2A09: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0900001000800000805f9b34fb);
+const CHAR_UUID_0X2A0B: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0b00001000800000805f9b34fb);
+const CHAR_UUID_0X2A0C: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0c00001000800000805f9b34fb); // Parameter characteristics
+const CHAR_UUID_0X2A0D: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0d00001000800000805f9b34fb); // Parameter characteristics
+const CHAR_UUID_0X2A0E: uuid::Uuid = uuid::Uuid::from_u128(0x00002a0e00001000800000805f9b34fb); // Parameter characteristics
 const CHAR_UUID_0X2A11: uuid::Uuid = uuid::Uuid::from_u128(0x00002a1100001000800000805f9b34fb);
 const CHAR_UUID_0X2A12: uuid::Uuid = uuid::Uuid::from_u128(0x00002a1200001000800000805f9b34fb);
 const CHAR_UUID_0X2A13: uuid::Uuid = uuid::Uuid::from_u128(0x00002a1300001000800000805f9b34fb);
 const CHAR_UUID_0X2A14: uuid::Uuid = uuid::Uuid::from_u128(0x00002a1400001000800000805f9b34fb);
 
+// TODO send/set parameters
+// const SERVICE_UUID_0X1810: uuid::Uuid = uuid::Uuid::from_u128(0x0000181000001000800000805f9b34fb);
+
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct InverterData {
     // Product info
     model_type: u8,
-    topology: String,
+    model_identification: u8,
+    topology: u8, // Note: 0 => "transformerless" 1 => "transformer". Unkown from where to get it!
     cpu_version: String,
     blt_version: String,
+    operation_logic: String,
 
     // Basic info
     ac_voltage: f32,
@@ -49,9 +60,18 @@ pub struct InverterData {
     bulk_charge: i16,
 
     // Unknown values
+    scc_cpu1: String,
+    scc_cpu2: String,
+    scc_cpu3: String,
+    scc_cpu4: String,
+    charging_data1: String,
+    charging_data2: String,
+    ac_charging_data1: String,
+    ac_charging_data2: String,
     watts_unkown_01: u16,
     unkown_02: f32,
     unkown_03: u16,
+    discharge_current: u8,
 
     // Rated information
     nominal_ac_voltage: f32,
@@ -104,6 +124,11 @@ pub struct InverterData {
     p_max_charging_current: u8,
     p_max_ac_charging_current: u8,
     p_back_to_discharge_voltage: f32,
+    p_min_bulk_voltage: f32,
+    p_max_bulk_voltage: f32,
+    p_min_undervoltage: f32,
+    p_max_undervoltage: f32,
+    p_bulk_charge_time_range: u8,
 }
 
 impl InverterData {
@@ -257,9 +282,8 @@ impl InverterData {
         self.blt_version = String::from_utf8_lossy(&bytes[12..]).into_owned();
     }
 
-    fn parse_0x2a02(&mut self, _bytes: Vec<u8>) {
-        // NOTE: Not needed for us.
-        //       This is used to download a logreport from the inverter.
+    fn parse_0x2a02(&mut self, bytes: Vec<u8>) {
+        self.model_identification = bytes[19];
     }
 
     fn parse_0x2a03(&mut self, bytes: Vec<u8>) {
@@ -307,6 +331,38 @@ impl InverterData {
         self.nominal_output_frequency = InverterData::b_to_f32([bytes[6], bytes[7]], None);
         self.nominal_output_apparent_power = u16::from_le_bytes([bytes[10], bytes[11]]);
         self.nominal_output_active_power = u16::from_le_bytes([bytes[12], bytes[13]]);
+    }
+
+    fn parse_0x2a06(&mut self, bytes: Vec<u8>) {
+        // TODO What contains this package? Is it a string?
+        self.charging_data1 = String::from_utf8_lossy(&bytes).to_string();
+    }
+
+    fn parse_0x2a07(&mut self, bytes: Vec<u8>) {
+        // TODO What contains this package? Is it a string?
+        self.charging_data2 = String::from_utf8_lossy(&bytes).to_string();
+    }
+
+    fn parse_0x2a08(&mut self, bytes: Vec<u8>) {
+        // TODO What contains this package? Is it a string?
+        self.ac_charging_data1 = String::from_utf8_lossy(&bytes).to_string();
+    }
+
+    fn parse_0x2a09(&mut self, bytes: Vec<u8>) {
+        // TODO What contains this package? Is it a string?
+        self.ac_charging_data2 = String::from_utf8_lossy(&bytes).to_string();
+    }
+
+    fn parse_0x2a0b(&mut self, bytes: Vec<u8>) {
+        self.p_min_bulk_voltage = InverterData::b_to_f32([bytes[6], bytes[7]], None);
+        self.p_max_bulk_voltage = InverterData::b_to_f32([bytes[8], bytes[9]], None);
+        self.p_min_undervoltage = InverterData::b_to_f32([bytes[10], bytes[11]], None);
+        self.p_max_undervoltage = InverterData::b_to_f32([bytes[12], bytes[13]], None);
+        self.p_bulk_charge_time_range = bytes[5]; // if 0 => "AUTO" else "Number value"
+
+        // Flags
+        // let flags_01 = BitArray::<u32, U8>::from_bytes(&[bytes[14]]);
+        // TODO parse this flags
     }
 
     fn parse_0x2a0c(&mut self, bytes: Vec<u8>) {
@@ -372,22 +428,38 @@ impl InverterData {
         // TODO self.p_rt_activate_battery_equalization = ; // Real-time activate battery equalization
     }
 
+    fn parse_0x2a0e(&mut self, bytes: Vec<u8>) {
+        self.operation_logic = match bytes[0] {
+            0 => "AUTO".to_owned(),
+            1 => "ONLINE".to_owned(),
+            2 => "ECO".to_owned(),
+            _ => format!("UNKNOWN ({:?})", bytes[0]),
+        };
+
+        // NOTE: Discharge current when max discharge current is enabled?
+        self.discharge_current = bytes[1]; // Is Amps
+    }
+
     fn parse_0x2a11(&mut self, bytes: Vec<u8>) {
+        self.scc_cpu1 = String::from_utf8_lossy(&bytes[0..8]).into_owned();
         self.pv_input_voltage_stage1 = InverterData::b_to_f32([bytes[12], bytes[13]], None);
         self.pv_input_power_stage1 = u16::from_le_bytes([bytes[14], bytes[15]]);
     }
 
     fn parse_0x2a12(&mut self, bytes: Vec<u8>) {
+        self.scc_cpu2 = String::from_utf8_lossy(&bytes[0..8]).into_owned();
         self.pv_input_voltage_stage2 = InverterData::b_to_f32([bytes[12], bytes[13]], None);
         self.pv_input_power_stage2 = u16::from_le_bytes([bytes[14], bytes[15]]);
     }
 
     fn parse_0x2a13(&mut self, bytes: Vec<u8>) {
+        self.scc_cpu3 = String::from_utf8_lossy(&bytes[0..8]).into_owned();
         self.pv_input_voltage_stage3 = InverterData::b_to_f32([bytes[12], bytes[13]], None);
         self.pv_input_power_stage3 = u16::from_le_bytes([bytes[14], bytes[15]]);
     }
 
     fn parse_0x2a14(&mut self, bytes: Vec<u8>) {
+        self.scc_cpu4 = String::from_utf8_lossy(&bytes[0..8]).into_owned();
         self.pv_input_voltage_stage4 = InverterData::b_to_f32([bytes[12], bytes[13]], None);
         self.pv_input_power_stage4 = u16::from_le_bytes([bytes[14], bytes[15]]);
     }
@@ -395,6 +467,7 @@ impl InverterData {
     pub async fn read_characteristics(&mut self, service: Service) -> bluer::Result<()> {
         for char in service.characteristics().await? {
             let uuid = char.uuid().await?;
+
             match uuid {
                 CHAR_UUID_0X2A01 => {
                     if char.flags().await?.read {
@@ -426,6 +499,36 @@ impl InverterData {
                         self.parse_0x2a05(value);
                     }
                 }
+                CHAR_UUID_0X2A06 => {
+                    if char.flags().await?.read {
+                        let value = char.read().await?;
+                        self.parse_0x2a06(value);
+                    }
+                }
+                CHAR_UUID_0X2A07 => {
+                    if char.flags().await?.read {
+                        let value = char.read().await?;
+                        self.parse_0x2a07(value);
+                    }
+                }
+                CHAR_UUID_0X2A08 => {
+                    if char.flags().await?.read {
+                        let value = char.read().await?;
+                        self.parse_0x2a08(value);
+                    }
+                }
+                CHAR_UUID_0X2A09 => {
+                    if char.flags().await?.read {
+                        let value = char.read().await?;
+                        self.parse_0x2a09(value);
+                    }
+                }
+                CHAR_UUID_0X2A0B => {
+                    if char.flags().await?.read {
+                        let value = char.read().await?;
+                        self.parse_0x2a0b(value);
+                    }
+                }
                 CHAR_UUID_0X2A0C => {
                     if char.flags().await?.read {
                         let value = char.read().await?;
@@ -436,6 +539,12 @@ impl InverterData {
                     if char.flags().await?.read {
                         let value = char.read().await?;
                         self.parse_0x2a0d(value);
+                    }
+                }
+                CHAR_UUID_0X2A0E => {
+                    if char.flags().await?.read {
+                        let value = char.read().await?;
+                        self.parse_0x2a0e(value);
                     }
                 }
                 CHAR_UUID_0X2A11 => {
