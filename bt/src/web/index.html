@@ -333,10 +333,15 @@
                 const eventMessage = parseEventMessage(str);
 
                 if (eventMessage === null) {
+                    console.log("Could not be parsed:", str);
                     return;
                 }
 
                 if (eventMessages.at(-1) && loc_array.at(-1).id != eventMessage.id) {
+                    eventMessages.push(eventMessage);
+                    addNewRow(eventMessage);
+                } else if (eventMessages.length === 0) {
+                    // Is the first message
                     eventMessages.push(eventMessage);
                     addNewRow(eventMessage);
                 }
