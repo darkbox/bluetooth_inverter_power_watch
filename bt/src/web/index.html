@@ -316,6 +316,7 @@
                 if (typeof str === "string") {
                     str = str.split(';');
                     if (str.length >= 3) {
+                        const now = new Date();
                         return {
                             id: parseInt(str[0].match(/\d+/)),
                             level: str[1].substring(7),
