@@ -278,7 +278,7 @@
         <fieldset>
             <legend>Eventos registrados</legend>
             <table width="100%">
-                <thead>
+                <thead style="text-align: left;">
                     <tr>
                         <th>Nivel</th>
                         <th>ID</th>
@@ -337,7 +337,7 @@
                     return;
                 }
 
-                if (eventMessages.at(-1) && loc_array.at(-1).id != eventMessage.id) {
+                if (eventMessages.at(-1) && eventMessages.at(-1).id != eventMessage.id) {
                     eventMessages.push(eventMessage);
                     addNewRow(eventMessage);
                 } else if (eventMessages.length === 0) {
