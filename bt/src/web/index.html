@@ -300,7 +300,7 @@
             let eventMessages = [];
             const tbody = document.getElementById(tbodyId);
 
-            if (tbody) {
+            if (!tbody) {
                 console.error('Log body table with id', tbodyId, 'not found!');
             }
 
@@ -315,7 +315,7 @@
             function parseEventMessage(str) {
                 if (typeof str === "string") {
                     str = str.split(';');
-                    if (str.length() >= 3) {
+                    if (str.length >= 3) {
                         return {
                             id: parseInt(str[0].match(/\d+/)),
                             level: str[1].substring(7),
