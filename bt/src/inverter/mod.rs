@@ -27,6 +27,75 @@ const CHAR_UUID_0X2A14: uuid::Uuid = uuid::Uuid::from_u128(0x00002a1400001000800
 // TODO send/set parameters
 // const SERVICE_UUID_0X1810: uuid::Uuid = uuid::Uuid::from_u128(0x0000181000001000800000805f9b34fb);
 
+const EVENT_MESSAGE: [&str; 32] = [
+    "PV loss",
+    "Inverter fault",
+    "Bus Over",
+    "Bus Under",
+    "Bus Soft Fail",
+    "Line Fail",
+    "Output Short",
+    "Inverter voltage too low",
+    "Inverter voltage too high",
+    "Over temperature",
+    "Fan locked",
+    "Battery voltage high",
+    "Battery low alarm",
+    "Over charge",
+    "Battery under shutdown",
+    "Battery derating",
+    "Over load",
+    "EEPROM Fault",
+    "Inverter Over Current",
+    "Inverter Soft Fail",
+    "Self Test Fail",
+    "OP DC Voltage Over",
+    "Bat Open",
+    "Current Sensor Fail",
+    "Battery Short",
+    "Power limit",
+    "PV voltage high",
+    "MPPT overload fault",
+    "MPPT overload warning",
+    "Battery too low to charge",
+    "Reserved",
+    "Reserved",
+];
+
+const EVENT_ID_01: [&str; 32] = [
+    "1000", "1001", "1002", "1003", "1004", "2001", "2002", "1005", "1006", "1007", "1008", "1009",
+    "2006", "2007", "2008", "2009", "1010", "2011", "1011", "1012", "1013", "1014", "1015", "1016",
+    "1017", "2012", "2013", "2014", "2015", "2016", "", "",
+];
+
+const EVENT_ID_02: [&str; 32] = [
+    "1000", "1001", "1002", "1003", "1004", "2001", "2002", "1005", "1006", "2003", "2004", "2005",
+    "2006", "2007", "2008", "2009", "2010", "2011", "1011", "1012", "1013", "1014", "1015", "1016",
+    "1017", "2012", "2013", "2014", "2015", "2016", "", "",
+];
+
+const EVENT_LEVEL: [&str; 32] = [
+    "Warning", "Fault", "Fault", "Fault", "Fault", "Warning", "Fault", "Fault", "Fault", "T", "T",
+    "T", "Warning", "Warning", "Warning", "Warning", "T", "Warning", "Fault", "Fault", "Fault",
+    "Fault", "Warning", "Fault", "Fault", "Warning", "Warning", "Warning", "Warning", "Warning",
+    "", "",
+];
+
+struct EventLine {
+    id: String,
+    level: String,
+    message: String,
+}
+
+impl ToString for EventLine {
+    fn to_string(&self) -> String {
+        format!(
+            "ID: {}; LEVEL: {}; MESSAGE: {};",
+            self.id, self.level, self.message
+        )
+    }
+}
+
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct InverterData {
     // Product info
@@ -129,6 +198,9 @@ pub struct InverterData {
     p_min_undervoltage: f32,
     p_max_undervoltage: f32,
     p_bulk_charge_time_range: u8,
+
+    // Event Log (Faults and Warnings)
+    last_event_message: String,
 }
 
 impl InverterData {
@@ -311,15 +383,20 @@ impl InverterData {
         self.unkown_03 = u16::from_le_bytes([bytes[2], bytes[3]]);
         self.battery_current_discharge = u16::from_le_bytes([bytes[4], bytes[5]]);
 
-        // Boolean parameters
-        // TODO decode missing parameters
-        // let params: [u8; 4] = [
-        //     bytes[11].to_be_bytes()[0],
-        //     bytes[10].to_be_bytes()[0],
-        //     bytes[9].to_be_bytes()[0],
-        //     bytes[8].to_be_bytes()[0],
-        // ];
-        // println!("Params: {:?}", params);
+        // Fault & Warning codes?
+        let flags_01 = BitArray::<u32, U8>::from_bytes(&[bytes[8]]);
+        let flags_02 = BitArray::<u32, U8>::from_bytes(&[bytes[9]]);
+        let flags_03 = BitArray::<u32, U8>::from_bytes(&[bytes[10]]);
+        let flags_04 = BitArray::<u32, U8>::from_bytes(&[bytes[11]]);
+
+        let mut event: Vec<u8> = Vec::new();
+        event.append(&mut flags_01.to_bytes());
+        event.append(&mut flags_02.to_bytes());
+        event.append(&mut flags_03.to_bytes());
+        event.append(&mut flags_04.to_bytes());
+        event.reverse();
+
+        self.last_event_message = InverterData::parse_event_message(&event).unwrap_or_default();
     }
 
     fn parse_0x2a05(&mut self, bytes: Vec<u8>) {
@@ -462,6 +539,34 @@ impl InverterData {
         self.scc_cpu4 = String::from_utf8_lossy(&bytes[0..8]).into_owned();
         self.pv_input_voltage_stage4 = InverterData::b_to_f32([bytes[12], bytes[13]], None);
         self.pv_input_power_stage4 = u16::from_le_bytes([bytes[14], bytes[15]]);
+    }
+
+    fn parse_event_message(event: &Vec<u8>) -> Option<String> {
+        for i in 0..event.len() {
+            let mut event_line = EventLine {
+                id: EVENT_ID_01[i].to_string(),
+                level: EVENT_LEVEL[i].to_string(),
+                message: EVENT_MESSAGE[i].to_string(),
+            };
+
+            if event[i] == 1 && EVENT_LEVEL[i] != "" {
+                if EVENT_LEVEL[i] == "T" {
+                    if event[i] == 1 {
+                        event_line.id = EVENT_ID_01[i].to_string();
+                        event_line.level = "Fault".to_owned();
+                    } else {
+                        event_line.id = EVENT_ID_02[i].to_string();
+                        event_line.level = "Warning".to_owned();
+                    }
+                }
+            }
+
+            if i != 1 {
+                return Some(event_line.to_string());
+            }
+        }
+
+        None
     }
 
     pub async fn read_characteristics(&mut self, service: Service) -> bluer::Result<()> {
