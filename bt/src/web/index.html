@@ -273,11 +273,80 @@
         </fieldset>
     </div>
 
+    <div class="logs"
+         style="margin-top:1rem;">
+        <fieldset>
+            <legend>Eventos registrados</legend>
+            <table width="100%">
+                <thead>
+                    <tr>
+                        <th>Nivel</th>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Mensaje</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-event-log"></tbody>
+            </table>
+        </fieldset>
+    </div>
+
     <dialog id="error-dialog">
         <h1>ERROR COMUNICACIÓN</h1>
     </dialog>
 
     <script>
+        const Logs = function (tbodyId) {
+            let eventMessages = [];
+            const tbody = document.getElementById(tbodyId);
+
+            if (tbody) {
+                console.error('Log body table with id', tbodyId, 'not found!');
+            }
+
+            function addNewRow(obj) {
+                if (tbody) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${obj.level}</td><td>${obj.id}</td><td>${obj.datetime}</td><td>${obj.message}</td>`;
+                    tbody.appendChild(row);
+                }
+            }
+
+            function parseEventMessage(str) {
+                if (typeof str === "string") {
+                    str = str.split(';');
+                    if (str.length() >= 3) {
+                        return {
+                            id: parseInt(str[0].match(/\d+/)),
+                            level: str[1].substring(7),
+                            message: str[2].substring(9),
+                            datetime: `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}.${now.getSeconds()}`,
+                        };
+                    }
+                }
+
+                return null;
+            }
+
+            function addEventFromString(str) {
+                const eventMessage = parseEventMessage(str);
+
+                if (eventMessage === null) {
+                    return;
+                }
+
+                if (eventMessages.at(-1) && loc_array.at(-1).id != eventMessage.id) {
+                    eventMessages.push(eventMessage);
+                    addNewRow(eventMessage);
+                }
+
+            }
+
+            return {
+                addEventFromString
+            };
+        }
+
         const App = function (id) {
             let inverterData = JSON.parse('{"model_type":0,"topology":"","cpu_version":"","blt_version":"","ac_voltage":0.0,"ac_frequency":0.0,"pv_input_voltage_stage1":0.0,"pv_input_current_stage1":0.0,"pv_input_power_stage1":0,"pv_input_voltage_stage2":0.0,"pv_input_power_stage2":0,"pv_input_voltage_stage3":0.0,"pv_input_power_stage3":0,"pv_input_voltage_stage4":0.0,"pv_input_power_stage4":0,"output_voltage":0.0,"output_frequency":0.0,"output_apparent_power":0,"output_active_power":0,"load_percentage":0,"output_mode":0,"charge_mode":0,"bulk_charge":0,"watts_unkown_01":0,"unkown_02":0.0,"unkown_03":0,"nominal_ac_voltage":0.0,"nominal_ac_current":0.0,"rated_battery_voltage":0.0,"nominal_output_voltage":0.0,"nominal_output_frequency":0.0,"nominal_output_apparent_power":0,"nominal_output_active_power":0,"workmode":"","battery_voltage":0.0,"battery_capacity":0,"battery_charge_current":0,"battery_current_discharge":0,"p_bulk_charging_voltage":0.0,"p_float_charging_voltage":0.0,"p_battery_cutoff_voltage":0.0,"p_battery_equalization_enable":false,"p_rt_activate_battery_equalization":false,"p_equalization_time":0,"p_equalization_period":0,"p_equalization_timeout":0,"p_equalization_voltage":0.0,"p_buzzer_alarm":false,"p_backlight":false,"p_overload_auto_restart":false,"p_overtemp_auto_restart":false,"p_beeps_while_primary_source_interrupt":false,"p_overload_bypass":false,"p_lcd_to_default_after_one_min":false,"p_fault_code_record":false,"p_charger_source_priority":0,"p_output_source_priotrity":0,"p_ac_input_range":0,"p_battery_type":0,"p_output_frequency":0.0,"p_output_voltage":0,"p_back_to_grid_voltage":0.0,"p_max_charging_current":0,"p_max_ac_charging_current":0,"p_back_to_discharge_voltage":0.0}');
             const app = document.getElementById(id);
@@ -286,8 +355,8 @@
                 topology: (value) => {
                     // TODO
                     switch (value) {
-                        case '': return "Transformer";
-                        case '?': return "Transformerless";
+                        case '?': return "Transformer";
+                        case '': return "Transformerless";
                     }
                     return value;
                 },
@@ -369,6 +438,8 @@
             };
             const errorDialog = document.getElementById('error-dialog');
 
+            const Log = Logs('tbody-event-log');
+
             function showErrorDialog() {
                 if (errorDialog) {
                     errorDialog.showModal();
@@ -429,6 +500,7 @@
                         }
 
                         hideErrorDialog();
+                        Log.addEventFromString(inverterData.last_event_message);
                     } else {
                         console.error('Invalid json object');
                         showErrorDialog();
