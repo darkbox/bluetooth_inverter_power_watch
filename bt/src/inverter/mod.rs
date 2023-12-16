@@ -133,10 +133,10 @@ pub struct InverterData {
     scc_cpu2: String,
     scc_cpu3: String,
     scc_cpu4: String,
-    charging_data1: [u8; 32],
-    charging_data2: [u8; 32],
-    ac_charging_data1: [u8; 32],
-    ac_charging_data2: [u8; 32],
+    charging_data1: Vec<u8>,
+    charging_data2: Vec<u8>,
+    ac_charging_data1: Vec<u8>,
+    ac_charging_data2: Vec<u8>,
     watts_unkown_01: u16,
     unkown_02: f32,
     unkown_03: u16,
@@ -425,35 +425,23 @@ impl InverterData {
     }
 
     fn parse_0x2a06(&mut self, bytes: Vec<u8>) {
-        // TODO What contains this package? Is it a string?
-        // self.charging_data1 = String::from_utf8_lossy(&bytes).to_string();
-        if bytes.len() == 32 {
-            self.charging_data1 = bytes.try_into().unwrap_or_default();
-        }
+        // TODO What contains this package?
+        self.charging_data1 = bytes;
     }
 
     fn parse_0x2a07(&mut self, bytes: Vec<u8>) {
-        // TODO What contains this package? Is it a string?
-        // self.charging_data2 = String::from_utf8_lossy(&bytes).to_string();
-        if bytes.len() == 32 {
-            self.charging_data2 = bytes.try_into().unwrap_or_default();
-        }
+        // TODO What contains this package?
+        self.charging_data2 = bytes;
     }
 
     fn parse_0x2a08(&mut self, bytes: Vec<u8>) {
-        // TODO What contains this package? Is it a string?
-        //self.ac_charging_data1 = String::from_utf8_lossy(&bytes).to_string();
-        if bytes.len() == 32 {
-            self.ac_charging_data1 = bytes.try_into().unwrap_or_default();
-        }
+        // TODO What contains this package?
+        self.ac_charging_data1 = bytes;
     }
 
     fn parse_0x2a09(&mut self, bytes: Vec<u8>) {
-        // TODO What contains this package? Is it a string?
-        // self.ac_charging_data2 = String::from_utf8_lossy(&bytes).to_string();
-        if bytes.len() == 32 {
-            self.ac_charging_data2 = bytes.try_into().unwrap_or_default();
-        }
+        // TODO What contains this package?
+        self.ac_charging_data2 = bytes;
     }
 
     fn parse_0x2a0b(&mut self, bytes: Vec<u8>) {
