@@ -350,11 +350,17 @@ impl InverterData {
         u16::from_le_bytes(bytes) as f32 * factor.unwrap_or(0.1)
     }
 
-    fn split_bytes(bytes: &[u8]) -> Vec<u8> {
-        BitArray::<u32, U8>::from_bytes(bytes)
+    fn split_bytes(bytes: &[u8], reverse: bool) -> Vec<u8> {
+        let mut bits_array: Vec<u8> = BitArray::<u32, U8>::from_bytes(bytes)
             .into_iter()
             .map(|b| if b { 1 } else { 0 })
-            .collect()
+            .collect();
+
+        if reverse {
+            bits_array.reverse();
+        }
+
+        bits_array
     }
 
     fn parse_0x2a01(&mut self, bytes: Vec<u8>) {
@@ -393,10 +399,10 @@ impl InverterData {
 
         // Fault & Warning codes
         let mut event: Vec<u8> = Vec::new();
-        event.append(&mut InverterData::split_bytes(&[bytes[8]]));
-        event.append(&mut InverterData::split_bytes(&[bytes[9]]));
-        event.append(&mut InverterData::split_bytes(&[bytes[10]]));
-        event.append(&mut InverterData::split_bytes(&[bytes[11]]));
+        event.append(&mut InverterData::split_bytes(&[bytes[8]], true));
+        event.append(&mut InverterData::split_bytes(&[bytes[9]], true));
+        event.append(&mut InverterData::split_bytes(&[bytes[10]], true));
+        event.append(&mut InverterData::split_bytes(&[bytes[11]], true));
         // event.reverse();
 
         // println!("Event flags: {:?}", event);
