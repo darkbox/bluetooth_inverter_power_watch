@@ -90,7 +90,7 @@ struct EventLine {
 impl ToString for EventLine {
     fn to_string(&self) -> String {
         format!(
-            "ID: {}; LEVEL: {}; MESSAGE: {};",
+            "ID:{};LEVEL:{};MESSAGE:{};",
             self.id, self.level, self.message
         )
     }
@@ -201,6 +201,7 @@ pub struct InverterData {
 
     // Event Log (Faults and Warnings)
     last_event_message: String,
+    raw_event_flags: [u8; 32],
 }
 
 impl InverterData {
@@ -398,9 +399,12 @@ impl InverterData {
         event.append(&mut InverterData::split_bytes(&[bytes[11]]));
         event.reverse();
 
-        println!("Event flags: {:?}", event);
+        // println!("Event flags: {:?}", event);
 
         self.last_event_message = InverterData::parse_event_message(&event).unwrap_or_default();
+        if event.len() == 32 {
+            self.raw_event_flags = event.try_into().unwrap_or_default();
+        }
     }
 
     fn parse_0x2a05(&mut self, bytes: Vec<u8>) {

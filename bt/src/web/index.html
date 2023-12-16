@@ -319,8 +319,8 @@
                         const now = new Date();
                         return {
                             id: parseInt(str[0].match(/\d+/)),
-                            level: str[1].substring(7),
-                            message: str[2].substring(9),
+                            level: str[1].substring(6),
+                            message: str[2].substring(8),
                             datetime: `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}.${now.getSeconds()}`,
                         };
                     }
