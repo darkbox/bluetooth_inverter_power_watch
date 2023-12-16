@@ -350,7 +350,7 @@ impl InverterData {
     }
 
     fn split_bytes(bytes: &[u8]) -> Vec<u8> {
-        BitArray::<u32, U8>::from_bytes(&[bytes[8]])
+        BitArray::<u32, U8>::from_bytes(bytes)
             .into_iter()
             .map(|b| if b { 1 } else { 0 })
             .collect()
@@ -563,11 +563,13 @@ impl InverterData {
                         event_line.level = "Warning".to_owned();
                     }
                 }
-            }
 
-            if i != 1 {
                 return Some(event_line.to_string());
             }
+
+            // if i != 1 {
+            //     return Some(event_line.to_string());
+            // }
         }
 
         None
