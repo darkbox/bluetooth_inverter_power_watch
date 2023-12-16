@@ -349,6 +349,13 @@ impl InverterData {
         u16::from_le_bytes(bytes) as f32 * factor.unwrap_or(0.1)
     }
 
+    fn split_bytes(bytes: &[u8]) -> Vec<u8> {
+        BitArray::<u32, U8>::from_bytes(&[bytes[8]])
+            .into_iter()
+            .map(|b| if b { 1 } else { 0 })
+            .collect()
+    }
+
     fn parse_0x2a01(&mut self, bytes: Vec<u8>) {
         self.cpu_version = String::from_utf8_lossy(&bytes[3..11]).into_owned();
         self.blt_version = String::from_utf8_lossy(&bytes[12..]).into_owned();
@@ -383,18 +390,15 @@ impl InverterData {
         self.unkown_03 = u16::from_le_bytes([bytes[2], bytes[3]]);
         self.battery_current_discharge = u16::from_le_bytes([bytes[4], bytes[5]]);
 
-        // Fault & Warning codes?
-        let flags_01 = BitArray::<u32, U8>::from_bytes(&[bytes[8]]);
-        let flags_02 = BitArray::<u32, U8>::from_bytes(&[bytes[9]]);
-        let flags_03 = BitArray::<u32, U8>::from_bytes(&[bytes[10]]);
-        let flags_04 = BitArray::<u32, U8>::from_bytes(&[bytes[11]]);
-
+        // Fault & Warning codes
         let mut event: Vec<u8> = Vec::new();
-        event.append(&mut flags_01.to_bytes());
-        event.append(&mut flags_02.to_bytes());
-        event.append(&mut flags_03.to_bytes());
-        event.append(&mut flags_04.to_bytes());
+        event.append(&mut InverterData::split_bytes(&[bytes[8]]));
+        event.append(&mut InverterData::split_bytes(&[bytes[9]]));
+        event.append(&mut InverterData::split_bytes(&[bytes[10]]));
+        event.append(&mut InverterData::split_bytes(&[bytes[11]]));
         event.reverse();
+
+        println!("Event flags: {:?}", event);
 
         self.last_event_message = InverterData::parse_event_message(&event).unwrap_or_default();
     }
