@@ -200,7 +200,7 @@ pub struct InverterData {
     p_bulk_charge_time_range: u8,
 
     // Event Log (Faults and Warnings)
-    last_event_message: String,
+    events: Vec<String>,
     raw_event_flags: [u8; 32],
 }
 
@@ -407,7 +407,7 @@ impl InverterData {
 
         // println!("Event flags: {:?}", event);
 
-        self.last_event_message = InverterData::parse_event_message(&event).unwrap_or_default();
+        self.events = InverterData::parse_event_message(&event);
         if event.len() == 32 {
             self.raw_event_flags = event.try_into().unwrap_or_default();
         }
@@ -567,7 +567,9 @@ impl InverterData {
         self.pv_input_power_stage4 = u16::from_le_bytes([bytes[14], bytes[15]]);
     }
 
-    fn parse_event_message(event: &Vec<u8>) -> Option<String> {
+    fn parse_event_message(event: &Vec<u8>) -> Vec<String> {
+        let mut events: Vec<String> = Vec::new();
+
         for i in 0..event.len() {
             let mut event_line = EventLine {
                 id: EVENT_ID_01[i].to_string(),
@@ -586,7 +588,7 @@ impl InverterData {
                     }
                 }
 
-                return Some(event_line.to_string());
+                events.push(event_line.to_string());
             }
 
             // if i != 1 {
@@ -594,7 +596,7 @@ impl InverterData {
             // }
         }
 
-        None
+        events
     }
 
     pub async fn read_characteristics(&mut self, service: Service) -> bluer::Result<()> {

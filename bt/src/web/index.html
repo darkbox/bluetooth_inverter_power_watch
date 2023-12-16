@@ -506,7 +506,13 @@
                         }
 
                         hideErrorDialog();
-                        Log.addEventFromString(inverterData.last_event_message);
+
+                        // Handle events data
+                        if (Object.hasOwn(inverterData, 'events') && Array.isArray(inverterData.events)) {
+                            inverterData.events.forEach(event => {
+                                Log.addEventFromString(event);
+                            });
+                        }
                     } else {
                         console.error('Invalid json object');
                         showErrorDialog();
