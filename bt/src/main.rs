@@ -84,16 +84,21 @@ async fn main() {
     });
 
     // Run USB CAN serial port Service
-    let port_name = std::env::var("CANBUS_TTY_DEVICE").unwrap_or("/dev/ttyUSB2".to_owned());
-    let baud_rate = std::env::var("CANBUS_TTY_BAUD_RATE").unwrap_or_default();
-    let baud_rate: u32 = baud_rate.parse::<u32>().unwrap_or(200_000);
-    println!("Starting USB CAN serial interface service...");
-    let mut uci = UsbCanInterface::new(port_name, baud_rate);
-    uci.connect(on_received_battery_status);
-    rt::spawn(async move {
-        // TODO try to reconnect on failure every x time
-        let _ = uci.serve();
-    });
+    let port_name = std::env::var("CANBUS_TTY_DEVICE");
+    if port_name.is_ok() {
+        let port_name = port_name.unwrap();
+        let mut baud_rate: u32 = 200_000;
+        if let Ok(value) = std::env::var("CANBUS_TTY_BAUD_RATE") {
+            baud_rate = value.parse::<u32>().unwrap_or(baud_rate);
+        }
+        println!("Starting USB CAN serial interface service...");
+        let mut uci = UsbCanInterface::new(port_name, baud_rate);
+        uci.connect(on_received_battery_status);
+        rt::spawn(async move {
+            // TODO try to reconnect on failure every x time
+            let _ = uci.serve();
+        });
+    }
 
     // Close on Ctrl+c
     match signal::ctrl_c().await {
