@@ -57,15 +57,9 @@ async fn main() {
     // Run Web Service
     println!("Starting web server...");
     let server = HttpServer::new(|| {
-        // let cors = Cors::default()
-        //     .allowed_origin("*")
-        //     .allowed_methods(vec!["GET", "POST"])
-        //     .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-        //     .allowed_header(http::header::CONTENT_TYPE)
-        //     .max_age(3600);
-
+        let cors = Cors::permissive();
         App::new()
-            // .wrap(cors)
+            .wrap(cors)
             .service(root)
             .service(json_response_inverter_info)
             .service(json_response_can_battery_info)
