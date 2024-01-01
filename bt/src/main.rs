@@ -85,6 +85,8 @@ async fn main() {
     });
 
     // Run USB CAN serial port Service
+    let can_debug = std::env::var("CANBUS_DEBUG_MSGS").unwrap_or("false".to_owned());
+    let can_debug: bool = if can_debug == "true" { true } else { false };
     let port_name = std::env::var("CANBUS_TTY_DEVICE");
     if port_name.is_ok() {
         let port_name = port_name.unwrap();
@@ -108,15 +110,19 @@ async fn main() {
                         if let Some(frame) = decoder.append(serial_buf[0]) {
                             match frame.id {
                                 787 => {
-                                    println!("|====>{}", frame.to_string());
+                                    if can_debug {
+                                        println!("|====>{}", frame.to_string());
+                                    }
                                     let battery_status = DynessBatteryStatus::from(frame);
-                                    println!("{}", battery_status.to_string());
+                                    if can_debug {
+                                        println!("{}", battery_status.to_string());
+                                    }
                                     unsafe {
                                         SHARED_BATTERY_STATUS = Some(battery_status);
                                     }
                                 }
                                 _ => {
-                                    if frame.header.frame_type == FrameType::Standard {
+                                    if can_debug && frame.header.frame_type == FrameType::Standard {
                                         println!("{}", frame.to_string());
                                     }
                                 }
