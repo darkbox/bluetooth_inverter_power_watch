@@ -3,21 +3,7 @@ After some reverse engineering I manage to decode and present the stats in order
 Why using Bluetooth instead of the USB serial connection? you may ask. Well, is simple my control panel from the inverter burnout after several months using the serial connection. So after the long RMA process to get back and running the inverter I decided to not take any risks. No cables, no voltage picks, no fuses burnt or anything weird can happen :).
 
 # Get started
-## Connect to the inverter
-Is important to pair the inverter before executing the binary. Before that, make sure that Bluetooth service is up and running with:
-```
-sudo /etc/init.d/bluetooth status
-```
-
-If is down you can start it with:
-```
-sudo /etc/init.d/bluetooth start
-```
-
-To scan/find the device and pair it you can use the `bluetoothctl` utility. Or use the script `autoconnect.sh` witch you may need to modify with the inverter bluetooth address and password.
-**NOTE:** the default password is usually `123456`.
-
-**UPDATE:** since version `0.1.2` the `autoconnect.sh` script is no longer needed 😃.
+Download the tar file from releases, configure the `.env` file and install the service.
 
 ## Configure the parameters
 Make sure to configure the `.env` file and that is accessible to the binary.
@@ -36,15 +22,31 @@ POOLING_PERIOD=20
 POOLING_NIGHT_PERIOD=300
 INVERTER_BT_ADDRESS="48:70:1E:53:38:FC"
 
+# CAN USB to serial tty configuration
+CANBUS_DEBUG_MSGS=false
+CANBUS_TTY_DEVICE="/dev/ttyUSB0"
+CANBUS_TTY_BAUD_RATE=2000000
+
 # Web server configuration
 WEB_SERVER_PORT=9999
 ```
 
-**NOTE:** The periods are in seconds.
+**NOTE 1:** The periods are in seconds.
+
+**NOTE 2:** the default password is usually `123456`.
+
+### Get battery stats from *CAN BUS*
+Using a USB CAN adapter to serial we can retrieve some stats directly from the batteries bus.
+Only works with this adapter:
+[USB-CAN-A](https://www.waveshare.com/wiki/USB-CAN-A#Using_in_Linux_System) 
+
+![](USB-CAN-A-details-01.jpg)
+
+This is useful in order to get an acurate *SOC* reading from the batteries when the Inverter battery settings are manually set.
 
 ### Standalone web server
 A web server will be deployed to access some of the inverter's current data directly from the browser at `http://localhost:9999` or the port you have configured in the `.env` file.
-![](Screenshot_002.png)
+![](Screenshot_003.png)
 
 ### Influxdb2
 And instance of Influxdb must be already configured and up and running before executing the binary. The binary will write to the specified bucket in the given period if the inverter is connected. After that you can use the data as you wish, for example in Grafana.
