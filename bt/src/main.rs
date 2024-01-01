@@ -85,58 +85,50 @@ async fn main() {
     });
 
     // Run USB CAN serial port Service
-    // let port_name = std::env::var("CANBUS_TTY_DEVICE");
-    // if port_name.is_ok() {
-    //     let port_name = port_name.unwrap();
-    //     let mut baud_rate: u32 = 200_000;
-    //     if let Ok(value) = std::env::var("CANBUS_TTY_BAUD_RATE") {
-    //         baud_rate = value.parse::<u32>().unwrap_or(baud_rate);
-    //     }
-    //     println!("Starting USB CAN serial interface service...");
-    //     let mut uci = UsbCanInterface::new(port_name, baud_rate);
-    //     uci.connect(on_received_battery_status);
-    //     thread::spawn(move || {
-    //         uci.serve();
-    //     });
-    // }
-    let port_name = "/dev/ttyVUSB0";
-    let baud_rate = 2_000_000;
+    let port_name = std::env::var("CANBUS_TTY_DEVICE");
+    if port_name.is_ok() {
+        let port_name = port_name.unwrap();
+        let mut baud_rate = 2_000_000;
+        if let Ok(value) = std::env::var("CANBUS_TTY_BAUD_RATE") {
+            baud_rate = value.parse::<u32>().unwrap_or(baud_rate);
+        }
+        println!("Starting USB CAN serial interface service...");
+        thread::spawn(move || {
+            let mut port = serialport::new(&port_name, baud_rate)
+                .timeout(Duration::from_millis(10))
+                .open()
+                .expect("Failed to open port");
 
-    thread::spawn(move || {
-        let mut port = serialport::new(port_name, baud_rate)
-            .timeout(Duration::from_millis(10))
-            .open()
-            .expect("Failed to open port");
-
-        let mut serial_buf: Vec<u8> = vec![0; 1];
-        let mut decoder = Decoder::new();
-        println!("Receiving data on {} at {} baud:", &port_name, &baud_rate);
-        loop {
-            match port.read_exact(serial_buf.as_mut_slice()) {
-                Ok(_) => {
-                    if let Some(frame) = decoder.append(serial_buf[0]) {
-                        match frame.id {
-                            787 => {
-                                println!("|====>{}", frame.to_string());
-                                let battery_status = DynessBatteryStatus::from(frame);
-                                println!("{}", battery_status.to_string());
-                                unsafe {
-                                    SHARED_BATTERY_STATUS = Some(battery_status);
+            let mut serial_buf: Vec<u8> = vec![0; 1];
+            let mut decoder = Decoder::new();
+            println!("Receiving data on {} at {} baud:", &port_name, &baud_rate);
+            loop {
+                match port.read_exact(serial_buf.as_mut_slice()) {
+                    Ok(_) => {
+                        if let Some(frame) = decoder.append(serial_buf[0]) {
+                            match frame.id {
+                                787 => {
+                                    println!("|====>{}", frame.to_string());
+                                    let battery_status = DynessBatteryStatus::from(frame);
+                                    println!("{}", battery_status.to_string());
+                                    unsafe {
+                                        SHARED_BATTERY_STATUS = Some(battery_status);
+                                    }
                                 }
-                            }
-                            _ => {
-                                if frame.header.frame_type == FrameType::Standard {
-                                    println!("{}", frame.to_string());
+                                _ => {
+                                    if frame.header.frame_type == FrameType::Standard {
+                                        println!("{}", frame.to_string());
+                                    }
                                 }
                             }
                         }
                     }
+                    Err(ref e) if e.kind() == io::ErrorKind::TimedOut => (),
+                    Err(e) => eprintln!("{:?}", e),
                 }
-                Err(ref e) if e.kind() == io::ErrorKind::TimedOut => (),
-                Err(e) => eprintln!("{:?}", e),
             }
-        }
-    });
+        });
+    }
 
     // Close on Ctrl+c
     match signal::ctrl_c().await {
