@@ -1,6 +1,8 @@
 mod inverter;
 mod usb_can_battery;
 
+use std::thread;
+
 use actix_cors::Cors;
 use actix_web::{get, http, rt, App, HttpResponse, HttpServer, Responder};
 use bluer::Address;
@@ -94,9 +96,8 @@ async fn main() {
         println!("Starting USB CAN serial interface service...");
         let mut uci = UsbCanInterface::new(port_name, baud_rate);
         uci.connect(on_received_battery_status);
-        rt::spawn(async move {
-            // TODO try to reconnect on failure every x time
-            let _ = uci.serve();
+        thread::spawn(move || {
+            uci.serve();
         });
     }
 
