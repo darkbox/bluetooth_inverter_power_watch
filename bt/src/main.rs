@@ -1,7 +1,7 @@
 mod inverter;
 mod usb_can_battery;
 
-use std::thread;
+use std::{io, thread, time::Duration};
 
 use actix_cors::Cors;
 use actix_web::{get, http, rt, App, HttpResponse, HttpServer, Responder};
@@ -13,6 +13,8 @@ use inverter::{
 };
 use tokio::signal;
 use usb_can_battery::{server::UsbCanInterface, DynessBatteryStatus};
+
+use crate::usb_can_battery::{Decoder, FrameType};
 
 // FIXME: Use mutex or something secure
 static mut SHARED_BUFFER: Option<InverterData> = None;
@@ -58,15 +60,15 @@ async fn main() {
     // Run Web Service
     println!("Starting web server...");
     let server = HttpServer::new(|| {
-        let cors = Cors::default()
-            .allowed_origin("*")
-            .allowed_methods(vec!["GET", "POST"])
-            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-            .allowed_header(http::header::CONTENT_TYPE)
-            .max_age(3600);
+        // let cors = Cors::default()
+        //     .allowed_origin("*")
+        //     .allowed_methods(vec!["GET", "POST"])
+        //     .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+        //     .allowed_header(http::header::CONTENT_TYPE)
+        //     .max_age(3600);
 
         App::new()
-            .wrap(cors)
+            // .wrap(cors)
             .service(root)
             .service(json_response_inverter_info)
             .service(json_response_can_battery_info)
@@ -86,20 +88,55 @@ async fn main() {
     });
 
     // Run USB CAN serial port Service
-    let port_name = std::env::var("CANBUS_TTY_DEVICE");
-    if port_name.is_ok() {
-        let port_name = port_name.unwrap();
-        let mut baud_rate: u32 = 200_000;
-        if let Ok(value) = std::env::var("CANBUS_TTY_BAUD_RATE") {
-            baud_rate = value.parse::<u32>().unwrap_or(baud_rate);
+    // let port_name = std::env::var("CANBUS_TTY_DEVICE");
+    // if port_name.is_ok() {
+    //     let port_name = port_name.unwrap();
+    //     let mut baud_rate: u32 = 200_000;
+    //     if let Ok(value) = std::env::var("CANBUS_TTY_BAUD_RATE") {
+    //         baud_rate = value.parse::<u32>().unwrap_or(baud_rate);
+    //     }
+    //     println!("Starting USB CAN serial interface service...");
+    //     let mut uci = UsbCanInterface::new(port_name, baud_rate);
+    //     uci.connect(on_received_battery_status);
+    //     thread::spawn(move || {
+    //         uci.serve();
+    //     });
+    // }
+    let port_name = "/dev/ttyVUSB0";
+    let baud_rate = 2_000_000;
+
+    thread::spawn(move || {
+        let mut port = serialport::new(port_name, baud_rate)
+            .timeout(Duration::from_millis(10))
+            .open()
+            .expect("Failed to open port");
+
+        let mut serial_buf: Vec<u8> = vec![0; 1];
+        let mut decoder = Decoder::new();
+        println!("Receiving data on {} at {} baud:", &port_name, &baud_rate);
+        loop {
+            match port.read_exact(serial_buf.as_mut_slice()) {
+                Ok(_) => {
+                    if let Some(frame) = decoder.append(serial_buf[0]) {
+                        match frame.id {
+                            787 => {
+                                println!("|====>{}", frame.to_string());
+                                let battery_status = DynessBatteryStatus::from(frame);
+                                println!("{}", battery_status.to_string());
+                            }
+                            _ => {
+                                if frame.header.frame_type == FrameType::Standard {
+                                    println!("{}", frame.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(ref e) if e.kind() == io::ErrorKind::TimedOut => (),
+                Err(e) => eprintln!("{:?}", e),
+            }
         }
-        println!("Starting USB CAN serial interface service...");
-        let mut uci = UsbCanInterface::new(port_name, baud_rate);
-        uci.connect(on_received_battery_status);
-        thread::spawn(move || {
-            uci.serve();
-        });
-    }
+    });
 
     // Close on Ctrl+c
     match signal::ctrl_c().await {
