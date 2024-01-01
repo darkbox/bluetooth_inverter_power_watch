@@ -1,8 +1,7 @@
 mod inverter;
 mod usb_can_battery;
 
-use std::{io, thread, time::Duration};
-
+use crate::usb_can_battery::{Decoder, DynessBatteryStatus, FrameType};
 use actix_cors::Cors;
 use actix_web::{get, http, rt, App, HttpResponse, HttpServer, Responder};
 use bluer::Address;
@@ -11,10 +10,8 @@ use inverter::{
     bt::{BTInterface, InfluxData},
     InverterData,
 };
+use std::{io, thread, time::Duration};
 use tokio::signal;
-use usb_can_battery::{server::UsbCanInterface, DynessBatteryStatus};
-
-use crate::usb_can_battery::{Decoder, FrameType};
 
 // FIXME: Use mutex or something secure
 static mut SHARED_BUFFER: Option<InverterData> = None;
@@ -123,6 +120,9 @@ async fn main() {
                                 println!("|====>{}", frame.to_string());
                                 let battery_status = DynessBatteryStatus::from(frame);
                                 println!("{}", battery_status.to_string());
+                                unsafe {
+                                    SHARED_BATTERY_STATUS = Some(battery_status);
+                                }
                             }
                             _ => {
                                 if frame.header.frame_type == FrameType::Standard {
@@ -147,12 +147,6 @@ async fn main() {
             eprintln!("Unable to listen for shutdown signal: {}", err);
             // we also shut down in case of error
         }
-    }
-}
-
-fn on_received_battery_status(data: DynessBatteryStatus) {
-    unsafe {
-        SHARED_BATTERY_STATUS = Some(data);
     }
 }
 

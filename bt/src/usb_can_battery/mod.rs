@@ -1,5 +1,3 @@
-pub mod server;
-
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use serde::{Deserialize, Serialize};
 
