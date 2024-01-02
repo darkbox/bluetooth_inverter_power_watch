@@ -3,7 +3,7 @@ mod usb_can_battery;
 
 use crate::usb_can_battery::{Decoder, DynessBatteryStatus, FrameType};
 use actix_cors::Cors;
-use actix_web::{get, http, rt, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, rt, App, HttpResponse, HttpServer, Responder};
 use bluer::Address;
 use dotenvy::dotenv;
 use inverter::{
@@ -90,42 +90,63 @@ async fn main() {
         }
         println!("Starting USB CAN serial interface service...");
         thread::spawn(move || {
-            let mut port = serialport::new(&port_name, baud_rate)
+            let expire_time = std::time::Duration::from_secs(5 * 60); // 5min
+            loop {
+                let expire_connection = std::time::SystemTime::now();
+
+                let mut port = serialport::new(&port_name, baud_rate)
                 .timeout(Duration::from_millis(10))
                 .open()
                 .expect("Failed to open port");
 
-            let mut serial_buf: Vec<u8> = vec![0; 1];
-            let mut decoder = Decoder::new();
-            println!("Receiving data on {} at {} baud:", &port_name, &baud_rate);
-            loop {
-                match port.read_exact(serial_buf.as_mut_slice()) {
-                    Ok(_) => {
-                        if let Some(frame) = decoder.append(serial_buf[0]) {
-                            match frame.id {
-                                787 => {
-                                    if can_debug {
-                                        println!("|====>{}", frame.to_string());
+                let mut serial_buf: Vec<u8> = vec![0; 1];
+                let mut decoder = Decoder::new();
+                println!("Receiving data on {} at {} baud:", &port_name, &baud_rate);
+
+                loop {
+                    // Read serial port data
+                    match port.read_exact(serial_buf.as_mut_slice()) {
+                        Ok(_) => {
+                            if let Some(frame) = decoder.append(serial_buf[0]) {
+                                match frame.id {
+                                    787 => {
+                                        if can_debug {
+                                            println!("|====>{}", frame.to_string());
+                                        }
+                                        let battery_status = DynessBatteryStatus::from(frame);
+                                        if can_debug {
+                                            println!("{}", battery_status.to_string());
+                                        }
+                                        unsafe {
+                                            SHARED_BATTERY_STATUS = Some(battery_status);
+                                        }
                                     }
-                                    let battery_status = DynessBatteryStatus::from(frame);
-                                    if can_debug {
-                                        println!("{}", battery_status.to_string());
-                                    }
-                                    unsafe {
-                                        SHARED_BATTERY_STATUS = Some(battery_status);
-                                    }
-                                }
-                                _ => {
-                                    if can_debug && frame.header.frame_type == FrameType::Standard {
-                                        println!("{}", frame.to_string());
+                                    _ => {
+                                        if can_debug && frame.header.frame_type == FrameType::Standard {
+                                            println!("{}", frame.to_string());
+                                        }
                                     }
                                 }
                             }
                         }
+                        Err(ref e) if e.kind() == io::ErrorKind::TimedOut => {
+                            if let Ok(secs) = expire_connection.elapsed() {
+                               if secs > expire_time {
+                                    // Conection has expired. Restart it!
+                                    break;
+                               }
+                            }
+                        },
+                        Err(e) => {
+                             eprintln!("{:?}", e);
+                             // An error has ocurred. Restart it!
+                             break;
+                        },
                     }
-                    Err(ref e) if e.kind() == io::ErrorKind::TimedOut => (),
-                    Err(e) => eprintln!("{:?}", e),
                 }
+
+                drop(port);
+                thread::sleep(Duration::from_secs(3));
             }
         });
     }
