@@ -208,8 +208,8 @@ impl From<Frame> for DynessBatteryStatus {
 
         let voltage = BigEndian::read_u16(&value.data[..2]);
         let voltage: f32 = voltage as f32 * 0.01f32;
-        let amps = BigEndian::read_u16(&value.data[2..4]) as f32 * 0.1f32;
-        let temp = BigEndian::read_u16(&value.data[4..6]) as f32 * 0.1f32;
+        let amps = BigEndian::read_i16(&value.data[2..4]) as f32 * 0.1f32;
+        let temp = BigEndian::read_i16(&value.data[4..6]) as f32 * 0.1f32;
 
         DynessBatteryStatus {
             soc: LittleEndian::read_u16(&[value.data[6], 0]).into(),
