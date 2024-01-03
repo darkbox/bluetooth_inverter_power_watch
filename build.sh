@@ -13,6 +13,7 @@ echo 'Packaging...'
 TEMP_DIR=bipw_ubuntu_amd64_v$VERSION
 mkdir -p $TEMP_DIR
 cp $WORKING_DIR/target/release/bt $TEMP_DIR/
+cp $WORKING_DIR/.env $TEMP_DIR/
 cp $EXTRAS_DIR/bt.service $TEMP_DIR/
 cp $EXTRAS_DIR/install.sh $TEMP_DIR/
 tar -cJf $TEMP_DIR.tar.xz  $TEMP_DIR/
