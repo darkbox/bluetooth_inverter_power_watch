@@ -114,11 +114,13 @@ async fn main() {
                                             println!("|====>{}", frame.to_string());
                                         }
                                         let battery_status = DynessBatteryStatus::from(frame);
-                                        if can_debug {
-                                            println!("{}", battery_status.to_string());
-                                        }
-                                        unsafe {
-                                            SHARED_BATTERY_STATUS = Some(battery_status);
+                                        if let Ok(battery_status) = battery_status {
+                                            if can_debug {
+                                                println!("{}", battery_status.to_string());
+                                            }
+                                            unsafe {
+                                                SHARED_BATTERY_STATUS = Some(battery_status);
+                                            }
                                         }
                                     }
                                     _ => {

@@ -198,26 +198,28 @@ impl DynessBatteryStatus {
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
     }
-}
 
-impl From<Frame> for DynessBatteryStatus {
-    fn from(value: Frame) -> Self {
+    pub fn from(value: Frame) -> Result<Self, String> {
         // Example package data [13, B1, 00, 61, 00, A0, 50, 64]
         // 64  48      9f 00   37 01       d2 13
         // SOH SOC     TEMP    Amp?        Voltage
+
+        if value.data.len() < 8 {
+            return Err("Invalid data frame length".to_owned());
+        }
 
         let voltage = BigEndian::read_u16(&value.data[..2]);
         let voltage: f32 = voltage as f32 * 0.01f32;
         let amps = BigEndian::read_i16(&value.data[2..4]) as f32 * 0.1f32;
         let temp = BigEndian::read_i16(&value.data[4..6]) as f32 * 0.1f32;
 
-        DynessBatteryStatus {
+        Ok(DynessBatteryStatus {
             soc: LittleEndian::read_u16(&[value.data[6], 0]).into(),
             soh: LittleEndian::read_u16(&[value.data[7], 0]).into(),
             amps,
             temp,
             voltage,
-        }
+        })
     }
 }
 
