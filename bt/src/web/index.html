@@ -296,7 +296,6 @@
     </dialog>
 
     <script>
-        const DOMAIN = ''; //'http://192.168.0.192:9999';
         const Logs = function (tbodyId) {
             let eventMessages = [];
             const tbody = document.getElementById(tbodyId);
@@ -331,11 +330,12 @@
             }
 
             function existsOnTable(eventMessage) {
-                eventMessages.forEach(event => {
+                for (let index = 0; index < eventMessages.length; index++) {
+                    const event = eventMessages[index];
                     if (event.id == eventMessage.id) {
                         return true;
                     }
-                });
+                }
                 return false;
             }
 
