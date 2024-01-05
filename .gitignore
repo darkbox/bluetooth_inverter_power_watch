@@ -1,3 +1,4 @@
 *.tar.xz
 development
 bt/target
+build-and-upload.sh
