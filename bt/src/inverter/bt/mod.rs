@@ -27,6 +27,18 @@ impl InfluxData {
             bucket,
         }
     }
+
+    pub fn create_client(&self) -> Client {
+        Client::new(
+            &self.host,
+            &self.org,
+            &self.token,
+        )
+    }
+
+    pub fn get_bucket(&self) -> &str {
+        self.bucket.as_str()
+    }
 }
 
 #[derive(Clone)]
@@ -87,11 +99,7 @@ impl BTInterface {
 
     async fn save_to_db(&self) {
         let points = self.get_data_points();
-        let client = Client::new(
-            &self.influx_data.host,
-            &self.influx_data.org,
-            &self.influx_data.token,
-        );
+        let client = &self.influx_data.create_client();
         let result = client
             .write(&self.influx_data.bucket, stream::iter(points))
             .await;

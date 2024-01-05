@@ -1,5 +1,9 @@
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
+use futures::stream;
 use serde::{Deserialize, Serialize};
+use influxdb2::models::DataPoint;
+
+use crate::inverter::bt::InfluxData;
 
 #[derive(Debug)]
 pub struct Frame {
@@ -185,7 +189,7 @@ impl ToString for FrameHeader {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct DynessBatteryStatus {
     soc: u32,
     soh: u32,
@@ -220,6 +224,39 @@ impl DynessBatteryStatus {
             temp,
             voltage,
         })
+    }
+
+    pub async fn save_to_db(&self, influx_data: InfluxData) {
+        let points = self.get_data_points();
+        let client = influx_data.create_client();
+        let result = client
+            .write(influx_data.get_bucket(), stream::iter(points)).await;
+        
+        if let Err(e) = result {
+            println!("USB CAN Bus Influxdb client error: {}", e.to_string());
+        }
+    }
+
+    fn get_data_points(&self) -> Vec<DataPoint> {
+        let point_battery = DataPoint::builder("battery_can_bus")
+            .tag("host", "battery")
+            .field(
+                "soc",
+                self.soc as f64,
+            )
+            .field("voltage", self.voltage as f64)
+            .field(
+                "temp",
+                self.temp as f64,
+            )
+            .field(
+                "amps",
+                self.amps as f64,
+            )
+            .build()
+            .unwrap();
+
+        vec![point_battery]
     }
 }
 

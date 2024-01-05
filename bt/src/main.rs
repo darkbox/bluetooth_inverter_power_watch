@@ -11,7 +11,7 @@ use inverter::{
     InverterData,
 };
 use std::{io, thread, time::Duration};
-use tokio::signal;
+use tokio::{signal, runtime::Handle};
 
 // FIXME: Use mutex or something secure
 static mut SHARED_BUFFER: Option<InverterData> = None;
@@ -70,6 +70,8 @@ async fn main() {
     rt::spawn(server);
     println!("Server running at http://localhost:{}", web_server_port);
 
+    let can_bus_influx_data = influx_data.clone();
+
     // Run Bluetooth Service
     println!("Starting bluetooth interface service...");
     let mut bt_interface = BTInterface::new(Address::new(device_address), influx_data);
@@ -79,6 +81,8 @@ async fn main() {
     });
 
     // Run USB CAN serial port Service
+    let handle = Handle::current();
+
     let can_debug = std::env::var("CANBUS_DEBUG_MSGS").unwrap_or("false".to_owned());
     let can_debug: bool = if can_debug == "true" { true } else { false };
     let port_name = std::env::var("CANBUS_TTY_DEVICE");
@@ -90,7 +94,8 @@ async fn main() {
         }
         println!("Starting USB CAN serial interface service...");
         thread::spawn(move || {
-            let expire_time = std::time::Duration::from_secs(5 * 60); // 5min
+            let expire_time = std::time::Duration::from_secs(5 * 60); // 5min          
+
             loop {
                 let expire_connection = std::time::SystemTime::now();
 
@@ -117,10 +122,21 @@ async fn main() {
                                         if let Ok(battery_status) = battery_status {
                                             if can_debug {
                                                 println!("{}", battery_status.to_string());
-                                            }
+                                            }                                           
+
+                                            let battery_status_copy: DynessBatteryStatus = battery_status.clone();
+                                            
                                             unsafe {
                                                 SHARED_BATTERY_STATUS = Some(battery_status);
                                             }
+                                            
+                                            if can_debug {
+                                                println!("Saving CAN bus data into DB...");
+                                            }
+                                            let influx_data_copy = can_bus_influx_data.clone();
+                                            handle.spawn(async move {
+                                                battery_status_copy.save_to_db(influx_data_copy).await;
+                                            });
                                         }
                                     }
                                     _ => {
