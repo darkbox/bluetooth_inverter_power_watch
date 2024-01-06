@@ -1,3 +1,5 @@
+use std::slice::Iter;
+
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use futures::stream;
 use serde::{Deserialize, Serialize};
@@ -70,6 +72,30 @@ impl Decoder {
         None
     }
 
+    fn decode_id(frame_type: &FrameType, iter: &mut Iter<'_, u8>) -> Result<u16, String> {
+        match frame_type {
+            FrameType::Standard => {
+                if iter.len() < 2 {
+                    return Err("Standard frame has less than 2 bytes".to_owned());
+                }
+                let bytes = [*iter.next().unwrap(), *iter.next().unwrap()];
+                Ok(LittleEndian::read_u16(&bytes))
+            }
+            FrameType::Extended => {
+                if iter.len() < 4 {
+                    return Err("Extended frame has less than 4 bytes".to_owned());
+                }
+                let bytes = [
+                    *iter.next().unwrap(),
+                    *iter.next().unwrap(),
+                    *iter.next().unwrap(),
+                    *iter.next().unwrap(),
+                ];
+                Ok(LittleEndian::read_u16(&bytes))
+            }
+        }
+    }
+
     fn decode_frame(&mut self) -> Option<Frame> {
         let mut raw = self.packet_buffer.iter();
 
@@ -77,21 +103,15 @@ impl Decoder {
 
         let mut frame = Frame::new();
         frame.header = FrameHeader::from_bytes(&raw.next().unwrap());
-        frame.id = match frame.header.frame_type {
-            FrameType::Standard => {
-                let bytes = [*raw.next().unwrap(), *raw.next().unwrap()];
-                LittleEndian::read_u16(&bytes)
+        
+        match Decoder::decode_id(&frame.header.frame_type, &mut raw) {
+            Ok(frame_id) => {
+                frame.id = frame_id;
+            },
+            Err(_) => {
+                return None;
             }
-            FrameType::Extended => {
-                let bytes = [
-                    *raw.next().unwrap(),
-                    *raw.next().unwrap(),
-                    *raw.next().unwrap(),
-                    *raw.next().unwrap(),
-                ];
-                LittleEndian::read_u16(&bytes)
-            }
-        };
+        }
 
         let mut i = 0;
         while let Some(b) = raw.next() {
