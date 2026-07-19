@@ -127,7 +127,7 @@
 <body id="app">
 
     <header style="display:flex;gap:1rem;justify-content: space-between;">
-        <h1>BT POWER WATCH v0.1.7</h1>
+        <h1>BT POWER WATCH <span role="app-version">v0.0.0</span></h1>
         <div style="display:flex;flex-direction: column;text-align: right;">
             <span id="local-date"></span>
             <span id="local-time"></span>
@@ -501,6 +501,23 @@
                 }
             }
 
+            function requestAppVersion() {
+                const request = new Request(`${DOMAIN}/api/version`, {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json",
+                    },
+                });
+                fetch(request).then((response) => { return response.json(); }).then((json) => {
+                    const versionElement = document.querySelector('[role="app-version"]');
+                    if (versionElement) {
+                        versionElement.innerHTML = json.version || 'v0.0.0';
+                    }
+                }).catch((reason) => {
+                    console.error(reason);
+                });
+            }
+
             function refreshView() {
                 bindings.forEach(field => {
                     const dataField = field.dataset.field;
@@ -591,12 +608,14 @@
             }
 
             // Initalization
+            requestAppVersion();
             requestData();
             refreshView();
             requestBatteryData();
             setInterval(refreshView, 300);
             setInterval(requestData, 1000);
             setInterval(requestBatteryData, 1000);
+            setInterval(requestAppVersion, 600000);
         };
         App('app');
 

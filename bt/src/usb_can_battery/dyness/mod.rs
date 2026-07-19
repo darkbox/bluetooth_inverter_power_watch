@@ -149,8 +149,8 @@ impl TryFrom<&Frame> for TempsAndCycles {
 
         Ok(TempsAndCycles {
             mos_temp: (BigEndian::read_u16(&frame.data[..2]) - 400) as f32 * 0.1f32,
-            board_temp: (BigEndian::read_u16(&frame.data[2..5]) - 400) as f32 * 0.1f32,
-            cg_cg_cycle: BigEndian::read_u16(&frame.data[5..7]),
+            board_temp: (BigEndian::read_u16(&frame.data[2..4]) - 400) as f32 * 0.1f32,
+            cg_cg_cycle: BigEndian::read_u16(&frame.data[4..6]),
         })
     }
 }
@@ -175,11 +175,11 @@ impl TryFrom<&Frame> for HealthAndMinMaxTemps {
 
         Ok(HealthAndMinMaxTemps {
             max_temp: (BigEndian::read_u16(&frame.data[..2]) - 400) as f32 * 0.1f32,
-            max_temp_no: BigEndian::read_u16(&frame.data[2..3]),
+            max_temp_no: frame.data[2] as u16,
             min_temp: (BigEndian::read_u16(&frame.data[3..5]) - 400) as f32 * 0.1f32,
-            min_temp_no: BigEndian::read_u16(&frame.data[5..6]),
-            soh: BigEndian::read_u16(&frame.data[6..7]),
-            soc: BigEndian::read_u16(&frame.data[7..8]),
+            min_temp_no: frame.data[5] as u16,
+            soh: frame.data[6] as u16,
+            soc: frame.data[7] as u16,
         })
     }
 }

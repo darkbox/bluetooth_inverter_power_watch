@@ -98,6 +98,8 @@ async fn main() {
             .wrap(cors)
             .app_data(web::Data::new(web_state.clone()))
             .service(root)
+            .service(json_response_status)
+            .service(json_response_version)
             .service(json_response_inverter_info)
             .service(json_response_can_battery_info)
     })
@@ -123,6 +125,7 @@ async fn main() {
 
     // Run USB CAN serial port Service
     let handle = Handle::current();
+    let state_for_can = state.clone();
     let can_debug = std::env::var(config::CANBUS_DEBUG_MSGS)
         .ok()
         .and_then(|v| v.parse::<bool>().ok())
@@ -171,7 +174,9 @@ async fn main() {
                                             let battery_status_copy: DynessBatteryStatus =
                                                 battery_status.clone();
 
-                                            *state.battery.write().unwrap() = Some(battery_status);
+                                            // Update the shared state with the new battery status
+                                            *state_for_can.battery.write().unwrap() =
+                                                Some(battery_status);
 
                                             if can_debug {
                                                 println!("Saving CAN bus data into DB...");
@@ -245,9 +250,22 @@ async fn root() -> impl Responder {
         .body(String::from_utf8_lossy(html_bytes))
 }
 
+#[get("/api/version")]
+async fn json_response_version() -> impl Responder {
+    let version = env!("CARGO_PKG_VERSION");
+    HttpResponse::Ok()
+        .content_type("application/json")
+        .body(format!(r#"{{"version": "{}"}}"#, version))
+}
+
+#[get("/api/status")]
+async fn json_response_status(state: web::Data<AppState>) -> impl Responder {
+    HttpResponse::Ok().body("NOT IMPLEMENTED")
+}
+
 #[get("/api/info")]
 async fn json_response_inverter_info(state: web::Data<AppState>) -> impl Responder {
-    let guard = state.battery.read().unwrap();
+    let guard = state.inverter.read().unwrap();
 
     match guard.as_ref().and_then(|data| data.to_json().ok()) {
         Some(json) => HttpResponse::Ok()
