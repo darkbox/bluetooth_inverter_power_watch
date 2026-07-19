@@ -1,16 +1,18 @@
+pub mod dyness;
+
 use std::slice::Iter;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use futures::stream;
-use serde::{Deserialize, Serialize};
 use influxdb2::models::DataPoint;
+use serde::{Deserialize, Serialize};
 
 use crate::inverter::bt::InfluxData;
 
 #[derive(Debug)]
 pub struct Frame {
     pub header: FrameHeader,
-    pub id: u16,
+    pub id: u32,
     pub data: Vec<u8>,
 }
 
@@ -72,14 +74,14 @@ impl Decoder {
         None
     }
 
-    fn decode_id(frame_type: &FrameType, iter: &mut Iter<'_, u8>) -> Result<u16, String> {
+    fn decode_id(frame_type: &FrameType, iter: &mut Iter<'_, u8>) -> Result<u32, String> {
         match frame_type {
             FrameType::Standard => {
                 if iter.len() < 2 {
                     return Err("Standard frame has less than 2 bytes".to_owned());
                 }
                 let bytes = [*iter.next().unwrap(), *iter.next().unwrap()];
-                Ok(LittleEndian::read_u16(&bytes))
+                Ok(LittleEndian::read_u16(&bytes).into())
             }
             FrameType::Extended => {
                 if iter.len() < 4 {
@@ -91,7 +93,7 @@ impl Decoder {
                     *iter.next().unwrap(),
                     *iter.next().unwrap(),
                 ];
-                Ok(LittleEndian::read_u16(&bytes))
+                Ok(LittleEndian::read_u32(&bytes))
             }
         }
     }
@@ -103,11 +105,11 @@ impl Decoder {
 
         let mut frame = Frame::new();
         frame.header = FrameHeader::from_bytes(&raw.next().unwrap());
-        
+
         match Decoder::decode_id(&frame.header.frame_type, &mut raw) {
             Ok(frame_id) => {
                 frame.id = frame_id;
-            },
+            }
             Err(_) => {
                 return None;
             }
@@ -250,8 +252,9 @@ impl DynessBatteryStatus {
         let points = self.get_data_points();
         let client = influx_data.create_client();
         let result = client
-            .write(influx_data.get_bucket(), stream::iter(points)).await;
-        
+            .write(influx_data.get_bucket(), stream::iter(points))
+            .await;
+
         if let Err(e) = result {
             println!("USB CAN Bus Influxdb client error: {}", e.to_string());
         }
@@ -260,19 +263,10 @@ impl DynessBatteryStatus {
     fn get_data_points(&self) -> Vec<DataPoint> {
         let point_battery = DataPoint::builder("battery_can_bus")
             .tag("host", "battery")
-            .field(
-                "soc",
-                self.soc as f64,
-            )
+            .field("soc", self.soc as f64)
             .field("voltage", self.voltage as f64)
-            .field(
-                "temp",
-                self.temp as f64,
-            )
-            .field(
-                "amps",
-                self.amps as f64,
-            )
+            .field("temp", self.temp as f64)
+            .field("amps", self.amps as f64)
             .build()
             .unwrap();
 

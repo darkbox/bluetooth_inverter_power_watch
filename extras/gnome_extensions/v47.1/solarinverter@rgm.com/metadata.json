@@ -1,0 +1,12 @@
+{
+  "name": "Solar Inverter Power Watch",
+  "description": "Check basic info from a solar inverter",
+  "uuid": "solarinverter@rgm.com",
+  "shell-version": [
+    "47"
+  ],
+  "url": "https://github.com/darkbox",
+  "gettext-domain": "solarinverter@rgm.com",
+  "settings-schema": "org.gnome.shell.extensions.solarinverter",
+  "version": 6
+}

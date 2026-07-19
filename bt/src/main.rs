@@ -11,7 +11,7 @@ use inverter::{
     InverterData,
 };
 use std::{io, thread, time::Duration};
-use tokio::{signal, runtime::Handle};
+use tokio::{runtime::Handle, signal};
 
 // FIXME: Use mutex or something secure
 static mut SHARED_BUFFER: Option<InverterData> = None;
@@ -94,15 +94,17 @@ async fn main() {
         }
         println!("Starting USB CAN serial interface service...");
         thread::spawn(move || {
-            let expire_time = std::time::Duration::from_secs(5 * 60); // 5min          
+            let expire_time = std::time::Duration::from_secs(5 * 60); // 5min
+
+            let mut dyness_protocol = usb_can_battery::dyness::DynessCanProtocol::default();
 
             loop {
                 let expire_connection = std::time::SystemTime::now();
 
                 let mut port = serialport::new(&port_name, baud_rate)
-                .timeout(Duration::from_millis(10))
-                .open()
-                .expect("Failed to open port");
+                    .timeout(Duration::from_millis(10))
+                    .open()
+                    .expect("Failed to open port");
 
                 let mut serial_buf: Vec<u8> = vec![0; 1];
                 let mut decoder = Decoder::new();
@@ -122,44 +124,53 @@ async fn main() {
                                         if let Ok(battery_status) = battery_status {
                                             if can_debug {
                                                 println!("{}", battery_status.to_string());
-                                            }                                           
+                                            }
 
-                                            let battery_status_copy: DynessBatteryStatus = battery_status.clone();
-                                            
+                                            let battery_status_copy: DynessBatteryStatus =
+                                                battery_status.clone();
+
                                             unsafe {
                                                 SHARED_BATTERY_STATUS = Some(battery_status);
                                             }
-                                            
+
                                             if can_debug {
                                                 println!("Saving CAN bus data into DB...");
                                             }
                                             let influx_data_copy = can_bus_influx_data.clone();
                                             handle.spawn(async move {
-                                                battery_status_copy.save_to_db(influx_data_copy).await;
+                                                battery_status_copy
+                                                    .save_to_db(influx_data_copy)
+                                                    .await;
                                             });
                                         }
                                     }
                                     _ => {
-                                        if can_debug && frame.header.frame_type == FrameType::Standard {
+                                        if can_debug
+                                            && frame.header.frame_type == FrameType::Standard
+                                        {
                                             println!("{}", frame.to_string());
                                         }
+
+                                        // TODO: Untested
+                                        dyness_protocol.decode(&frame);
+                                        println!("{:?}", &dyness_protocol);
                                     }
                                 }
                             }
                         }
                         Err(ref e) if e.kind() == io::ErrorKind::TimedOut => {
                             if let Ok(secs) = expire_connection.elapsed() {
-                               if secs > expire_time {
-                                    // Conection has expired. Restart it!
+                                if secs > expire_time {
+                                    // Connection has expired. Restart it!
                                     break;
-                               }
+                                }
                             }
-                        },
+                        }
                         Err(e) => {
-                             eprintln!("{:?}", e);
-                             // An error has ocurred. Restart it!
-                             break;
-                        },
+                            eprintln!("{:?}", e);
+                            // An error has occurred. Restart it!
+                            break;
+                        }
                     }
                 }
 

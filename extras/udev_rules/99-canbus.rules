@@ -1,0 +1,1 @@
+SUBSYSTEM=="tty",SUBSYSTEMS=="usb", ATTR{idProduct}=="7523", ATTR{idVendor}=="1a86",ATTRS{serial}=="0000:00:10.0",MODE="0666", SYMLINK+="canbus"
