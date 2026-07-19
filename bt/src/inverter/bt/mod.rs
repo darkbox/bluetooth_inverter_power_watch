@@ -29,11 +29,7 @@ impl InfluxData {
     }
 
     pub fn create_client(&self) -> Client {
-        Client::new(
-            &self.host,
-            &self.org,
-            &self.token,
-        )
+        Client::new(&self.host, &self.org, &self.token)
     }
 
     pub fn get_bucket(&self) -> &str {
@@ -41,12 +37,11 @@ impl InfluxData {
     }
 }
 
-#[derive(Clone)]
 pub struct BTInterface {
     target_device: Address,
     data: RefCell<InverterData>,
     influx_data: InfluxData,
-    listener: Option<fn(data: InverterData)>,
+    listener: Option<Box<dyn Fn(InverterData) + Send + Sync>>,
 }
 
 unsafe impl Sync for BTInterface {}
@@ -62,6 +57,8 @@ impl BTInterface {
         }
     }
 
+    /// Start the main loop to scan for the target device, query its data, and save it to InfluxDB.
+    /// The loop will run indefinitely, with a configurable period for querying the device.
     pub async fn serve(&self, period: u64, night_period: u64) {
         loop {
             let _ = self.scan_and_query_once().await.map_err(|e| {
@@ -87,16 +84,22 @@ impl BTInterface {
         }
     }
 
-    pub fn connect(&mut self, listener: fn(data: InverterData)) {
-        self.listener = Some(listener);
+    /// Connect a listener callback to receive emitted inverter data.
+    pub fn connect<F>(&mut self, listener: F)
+    where
+        F: Fn(InverterData) + Send + Sync + 'static,
+    {
+        self.listener = Some(Box::new(listener));
     }
 
+    /// Emit the inverter data to the registered listener, if any.
     fn emit(&self, data: InverterData) {
-        if let Some(listener) = self.listener {
+        if let Some(listener) = &self.listener {
             listener(data);
         }
     }
 
+    /// Save the inverter data to InfluxDB.
     async fn save_to_db(&self) {
         let points = self.get_data_points();
         let client = &self.influx_data.create_client();
@@ -108,6 +111,7 @@ impl BTInterface {
         }
     }
 
+    /// Get the data points for InfluxDB from the inverter data.
     fn get_data_points(&self) -> Vec<DataPoint> {
         let point_battery = DataPoint::builder("battery")
             .tag("host", "inverter")
@@ -160,6 +164,7 @@ impl BTInterface {
         }
     }
 
+    /// Request the passkey for pairing with the inverter device.
     pub async fn request_passkey(_req: RequestPasskey) -> ReqResult<u32> {
         println!("Requesting passkey...");
         let device_pin_code =
@@ -168,6 +173,7 @@ impl BTInterface {
         Ok(device_pin_code)
     }
 
+    /// Scan for the target device and query its data once.
     async fn scan_and_query_once(&self) -> bluer::Result<()> {
         let session = bluer::Session::new().await?;
 
@@ -225,6 +231,7 @@ impl BTInterface {
         Ok(())
     }
 
+    /// Query the target device for its data.
     async fn query_device(&self, adapter: &Adapter, addr: Address) -> bluer::Result<()> {
         let device = adapter.device(addr)?;
         device.set_trusted(true).await?;

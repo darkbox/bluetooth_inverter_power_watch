@@ -14,6 +14,7 @@
     <style>
         :root {
             --color-fg: #f9a72c;
+            --color-fg-mute: #f9a72c3d;
             --color-bg: black;
         }
 
@@ -79,6 +80,27 @@
             flex-direction: column;
         }
 
+        progress {
+            border: none;
+            mask: linear-gradient(90deg, #000 70%, #0000 0) 0/10%;
+        }
+
+        progress::-moz-progress-bar,
+        progress::-webkit-progress-value {
+            background: var(--color-fg);
+        }
+
+        progress {
+            color: var(--color-fg);
+        }
+
+        progress[value] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background: var(--color-fg-mute);
+        }
+
         @media screen and (min-width:1200px) {
             .blocks {
                 flex-direction: row;
@@ -105,7 +127,7 @@
 <body id="app">
 
     <header style="display:flex;gap:1rem;justify-content: space-between;">
-        <h1>BT POWER WATCH v0.1.6</h1>
+        <h1>BT POWER WATCH v0.1.7</h1>
         <div style="display:flex;flex-direction: column;text-align: right;">
             <span id="local-date"></span>
             <span id="local-time"></span>
@@ -139,6 +161,10 @@
                     <h3 class="uppercase">Carga</h3>
                     <span data-field="load_percentage"
                           data-unit="%"></span>
+                    <progress data-field="load_percentage"
+                              max="100"
+                              value="0"
+                              style="flex:1;"></progress>
                 </li>
                 <li>
                     <h3 class="uppercase">Modo salida</h3>
@@ -493,7 +519,12 @@
                         if (value === '') {
                             value = dataDefault;
                         }
-                        field.innerHTML = `${value}<sub>${dataUnit}</sub>`;
+
+                        if (field.tagName.toLowerCase() === 'progress') {
+                            field.value = value;
+                        } else {
+                            field.innerHTML = `${value}<sub>${dataUnit}</sub>`;
+                        }
                     } else {
                         console.warn(`"${dataField}" not found!`);
                     }
