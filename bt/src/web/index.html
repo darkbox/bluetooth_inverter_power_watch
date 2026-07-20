@@ -299,6 +299,54 @@
         </fieldset>
     </div>
 
+    <div style="margin-top:1rem;">
+        <fieldset>
+            <legend>Estado del sistema</legend>
+            <ul>
+                <li>
+                    <h3 class="uppercase">Estado</h3>
+                    <span id="service-status">?</span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Tiempo activo</h3>
+                    <span id="service-uptime">?</span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Bluetooth</h3>
+                    <span id="bt-status">?</span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Dirección BT</h3>
+                    <span id="bt-address">?</span>
+                </li>
+                <li>
+                    <h3 class="uppercase">BT Polling</h3>
+                    <span id="bt-polling-period">?</span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Última actualización BT</h3>
+                    <span id="bt-last-update">?</span>
+                </li>
+                <li>
+                    <h3 class="uppercase">CAN Bus</h3>
+                    <span id="can-status">?</span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Puerto serie</h3>
+                    <span id="can-device">?</span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Baudrate</h3>
+                    <span id="can-baudrate">?</span>
+                </li>
+                <li>
+                    <h3 class="uppercase">Última actualización CAN</h3>
+                    <span id="can-last-update">?</span>
+                </li>
+            </ul>
+        </fieldset>
+    </div>
+
     <div class="logs"
          style="margin-top:1rem;">
         <fieldset>
@@ -395,6 +443,8 @@
             let isBatteryDataAvailable = false;
             let batteryData = JSON.parse('{"soc":0}');
             let inverterData = JSON.parse('{"model_type":0,"topology":"","cpu_version":"","blt_version":"","ac_voltage":0.0,"ac_frequency":0.0,"pv_input_voltage_stage1":0.0,"pv_input_current_stage1":0.0,"pv_input_power_stage1":0,"pv_input_voltage_stage2":0.0,"pv_input_power_stage2":0,"pv_input_voltage_stage3":0.0,"pv_input_power_stage3":0,"pv_input_voltage_stage4":0.0,"pv_input_power_stage4":0,"output_voltage":0.0,"output_frequency":0.0,"output_apparent_power":0,"output_active_power":0,"load_percentage":0,"output_mode":0,"charge_mode":0,"bulk_charge":0,"watts_unkown_01":0,"unkown_02":0.0,"unkown_03":0,"nominal_ac_voltage":0.0,"nominal_ac_current":0.0,"rated_battery_voltage":0.0,"nominal_output_voltage":0.0,"nominal_output_frequency":0.0,"nominal_output_apparent_power":0,"nominal_output_active_power":0,"workmode":"","battery_voltage":0.0,"battery_capacity":0,"battery_charge_current":0,"battery_current_discharge":0,"p_bulk_charging_voltage":0.0,"p_float_charging_voltage":0.0,"p_battery_cutoff_voltage":0.0,"p_battery_equalization_enable":false,"p_rt_activate_battery_equalization":false,"p_equalization_time":0,"p_equalization_period":0,"p_equalization_timeout":0,"p_equalization_voltage":0.0,"p_buzzer_alarm":false,"p_backlight":false,"p_overload_auto_restart":false,"p_overtemp_auto_restart":false,"p_beeps_while_primary_source_interrupt":false,"p_overload_bypass":false,"p_lcd_to_default_after_one_min":false,"p_fault_code_record":false,"p_charger_source_priority":0,"p_output_source_priotrity":0,"p_ac_input_range":0,"p_battery_type":0,"p_output_frequency":0.0,"p_output_voltage":0,"p_back_to_grid_voltage":0.0,"p_max_charging_current":0,"p_max_ac_charging_current":0,"p_back_to_discharge_voltage":0.0}');
+            let serviceStatus = {};
+
             const app = document.getElementById(id);
             const bindings = app.querySelectorAll('[data-field]') || [];
             const parseField = {
@@ -554,6 +604,57 @@
                 return voltage > 0 ? watts / voltage : 0;
             }
 
+            function formatTimestamp(ts) {
+                if (!ts) return "-";
+
+                const d = new Date(ts);
+
+                if (isNaN(d.getTime()))
+                    return ts;
+
+                return d.toLocaleString();
+            }
+
+            function requestStatus() {
+                fetch(`${DOMAIN}/api/status`)
+                    .then(r => r.json())
+                    .then(status => {
+
+                        document.getElementById("service-status").textContent =
+                            status.status ?? "?";
+
+                        document.getElementById("service-uptime").textContent =
+                            `${status.uptime_secs ?? 0} s`;
+
+                        document.getElementById("bt-status").textContent =
+                            status.bluetooth ? "CONNECTED" : "DISCONNECTED";
+
+                        document.getElementById("bt-address").textContent =
+                            status.bluetooth_device ?? "-";
+
+                        document.getElementById("bt-polling-period").textContent =
+                            `${status.bluetooth_polling_period}s`;
+
+                        document.getElementById("bt-last-update").textContent =
+                            formatTimestamp(status.bluetooth_last_update);
+
+                        document.getElementById("can-status").textContent =
+                            status.canbus ? "CONNECTED" : "DISCONNECTED";
+
+                        document.getElementById("can-device").textContent =
+                            status.canbus_device ?? "-";
+
+                        document.getElementById("can-baudrate").textContent =
+                            status.canbus_baud_rate != null
+                                ? `${status.canbus_baud_rate.toLocaleString()} baud`
+                                : "-";
+
+                        document.getElementById("can-last-update").textContent =
+                            formatTimestamp(status.canbus_last_update);
+                    })
+                    .catch(console.error);
+            }
+
             function requestData() {
                 const request = new Request(`${DOMAIN}/api/info`, {
                     method: "GET",
@@ -609,11 +710,13 @@
 
             // Initalization
             requestAppVersion();
+            requestStatus();
             requestData();
             refreshView();
             requestBatteryData();
             setInterval(refreshView, 300);
             setInterval(requestData, 1000);
+            setInterval(requestStatus, 1000);
             setInterval(requestBatteryData, 1000);
             setInterval(requestAppVersion, 600000);
         };

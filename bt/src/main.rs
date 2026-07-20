@@ -27,18 +27,47 @@ use crate::usb_can_battery::{Decoder, DynessBatteryStatus, FrameType};
 use actix_cors::Cors;
 use actix_web::{get, rt, web, App, HttpResponse, HttpServer, Responder};
 use bluer::Address;
+use chrono::{DateTime, Utc};
 use dotenvy::dotenv;
 use inverter::{
     bt::{BTInterface, InfluxData},
     InverterData,
 };
-use std::{io, sync::Arc, sync::RwLock, thread, time::Duration};
+use serde::Serialize;
+use serde_json::json;
+use std::{io, sync::Arc, sync::RwLock, thread, time::Duration, time::Instant};
 use tokio::{runtime::Handle, signal};
 
 #[derive(Clone)]
 pub struct AppState {
     inverter: Arc<RwLock<Option<InverterData>>>,
     battery: Arc<RwLock<Option<DynessBatteryStatus>>>,
+
+    start_time: Instant,
+    inverter_last_update: Arc<RwLock<Option<DateTime<Utc>>>>,
+    battery_last_update: Arc<RwLock<Option<DateTime<Utc>>>>,
+
+    bluetooth_device: String,
+    canbus_device: Option<String>,
+    canbus_baud_rate: Option<u32>,
+    bluetooth_polling_period: u64,
+}
+
+#[derive(Serialize)]
+struct ServiceStatus {
+    status: &'static str,
+    version: &'static str,
+    uptime_secs: u64,
+
+    bluetooth: bool,
+    bluetooth_device: Option<String>,
+    bluetooth_last_update: Option<DateTime<Utc>>,
+    bluetooth_polling_period: u64,
+
+    canbus: bool,
+    canbus_device: Option<String>,
+    canbus_baud_rate: Option<u32>,
+    canbus_last_update: Option<DateTime<Utc>>,
 }
 
 #[actix_web::main]
@@ -83,9 +112,22 @@ async fn main() {
         .and_then(|v| v.parse::<u16>().ok())
         .unwrap_or(config::DEFAULT_WEB_SERVER_PORT);
 
+    let canbus_device = std::env::var(config::CANBUS_TTY_DEVICE).ok();
+    let canbus_baud_rate: u32 = std::env::var(config::CANBUS_TTY_BAUD_RATE)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(config::DEFAULT_CANBUS_BAUD_RATE);
+
     let state = AppState {
         inverter: Arc::new(RwLock::new(None)),
         battery: Arc::new(RwLock::new(None)),
+        start_time: Instant::now(),
+        inverter_last_update: Arc::new(RwLock::new(None)),
+        battery_last_update: Arc::new(RwLock::new(None)),
+        bluetooth_device: Address::new(device_address).to_string(),
+        canbus_device: canbus_device,
+        canbus_baud_rate: Some(canbus_baud_rate),
+        bluetooth_polling_period: bt_period,
     };
 
     // Run Web Service
@@ -131,12 +173,7 @@ async fn main() {
         .and_then(|v| v.parse::<bool>().ok())
         .unwrap_or(false);
 
-    if let Ok(port_name) = std::env::var(config::CANBUS_TTY_DEVICE) {
-        let baud_rate: u32 = std::env::var(config::CANBUS_TTY_BAUD_RATE)
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(config::DEFAULT_CANBUS_BAUD_RATE);
-
+    if let Some(port_name) = state_for_can.canbus_device {
         println!("Starting USB CAN serial interface service...");
         thread::spawn(move || {
             let expire_time = std::time::Duration::from_secs(5 * 60); // 5min
@@ -146,14 +183,17 @@ async fn main() {
             loop {
                 let expire_connection = std::time::SystemTime::now();
 
-                let mut port = serialport::new(&port_name, baud_rate)
+                let mut port = serialport::new(&port_name, canbus_baud_rate)
                     .timeout(Duration::from_millis(10))
                     .open()
                     .expect("Failed to open port");
 
                 let mut serial_buf: Vec<u8> = vec![0; 1];
                 let mut decoder = Decoder::new();
-                println!("Receiving data on {} at {} baud:", &port_name, &baud_rate);
+                println!(
+                    "Receiving data on {} at {} baud:",
+                    &port_name, &canbus_baud_rate
+                );
 
                 loop {
                     // Read serial port data
@@ -177,6 +217,8 @@ async fn main() {
                                             // Update the shared state with the new battery status
                                             *state_for_can.battery.write().unwrap() =
                                                 Some(battery_status);
+                                            *state_for_can.battery_last_update.write().unwrap() =
+                                                Some(Utc::now());
 
                                             if can_debug {
                                                 println!("Saving CAN bus data into DB...");
@@ -240,6 +282,7 @@ async fn main() {
 /// Callback function to handle emitted inverter data and update the application state.
 fn on_emit(state: &AppState, data: InverterData) {
     *state.inverter.write().unwrap() = Some(data);
+    *state.inverter_last_update.write().unwrap() = Some(Utc::now());
 }
 
 #[get("/")]
@@ -260,7 +303,45 @@ async fn json_response_version() -> impl Responder {
 
 #[get("/api/status")]
 async fn json_response_status(state: web::Data<AppState>) -> impl Responder {
-    HttpResponse::Ok().body("NOT IMPLEMENTED")
+    let uptime = state.start_time.elapsed().as_secs();
+    let bt_last = state.inverter_last_update.read().unwrap().clone();
+    let can_last = state.battery_last_update.read().unwrap().clone();
+
+    let bluetooth = bt_last
+        .as_ref()
+        .is_some_and(|t| (Utc::now() - *t).num_seconds() < 120);
+
+    let canbus = can_last
+        .as_ref()
+        .is_some_and(|t| (Utc::now() - *t).num_seconds() < 300);
+
+    let status = match (bluetooth, canbus) {
+        (true, true) => "OK",
+        (true, false) | (false, true) => "DEGRADED",
+        (false, false) => "ERROR",
+    };
+
+    let status = ServiceStatus {
+        status,
+        version: env!("CARGO_PKG_VERSION"),
+        uptime_secs: uptime,
+
+        bluetooth_device: Some(state.bluetooth_device.clone()),
+        bluetooth: bt_last
+            .as_ref()
+            .is_some_and(|t| (Utc::now() - *t).num_seconds() < 120),
+        bluetooth_last_update: bt_last,
+        bluetooth_polling_period: state.bluetooth_polling_period,
+
+        canbus_device: state.canbus_device.clone(),
+        canbus_baud_rate: state.canbus_baud_rate,
+        canbus: can_last
+            .as_ref()
+            .is_some_and(|t| (Utc::now() - *t).num_seconds() < 300),
+        canbus_last_update: can_last,
+    };
+
+    HttpResponse::Ok().json(status)
 }
 
 #[get("/api/info")]
@@ -271,7 +352,9 @@ async fn json_response_inverter_info(state: web::Data<AppState>) -> impl Respond
         Some(json) => HttpResponse::Ok()
             .content_type("application/json")
             .body(json),
-        None => HttpResponse::Ok().body("NO DATA"),
+        None => HttpResponse::ServiceUnavailable().json(json!({
+            "error": "No inverter data available"
+        })),
     }
 }
 
@@ -283,6 +366,8 @@ async fn json_response_can_battery_info(state: web::Data<AppState>) -> impl Resp
         Some(json) => HttpResponse::Ok()
             .content_type("application/json")
             .body(json),
-        None => HttpResponse::Ok().body("NO DATA"),
+        None => HttpResponse::ServiceUnavailable().json(json!({
+            "error": "No battery data available"
+        })),
     }
 }
