@@ -1,7 +1,14 @@
 {
     "cSpell.words": [
+        "actix",
+        "byteorder",
         "CANBUS",
+        "chrono",
+        "dotenvy",
         "dyness",
-        "serialport"
+        "serde",
+        "serialport",
+        "structmap",
+        "typenum"
     ]
 }
