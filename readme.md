@@ -1,4 +1,7 @@
 # Bluetooth Inverter Watch
+
+![Axpert VM III](inverter.png)
+
 After some reverse engineering I manage to decode and present the stats in order to monitor an *Axpert VM III* inverter using the Bluetooth connection.
 Why using Bluetooth instead of the USB serial connection? you may ask. Well, is simple my control panel from the inverter burnout after several months using the serial connection. So after the long RMA process to get back and running the inverter I decided to not take any risks. No cables, no voltage picks, no fuses burnt or anything weird can happen :).
 
@@ -10,7 +13,7 @@ Make sure to configure the `.env` file and that is accessible to the binary.
 
 ### .env
 Example `.env` file:
-```
+```bash
 # Influx database configuration
 INFLUXDB2_HOST=http://localhost:8086
 INFLUXDB2_ORG=home
@@ -44,6 +47,9 @@ Only works with this adapter:
 
 This is useful in order to get an acurate *SOC* reading from the batteries when the Inverter battery settings are manually set.
 
+Tested with **Dyness B4850 battery modules**
+![Dyness B4850](battery.png)
+
 ### Standalone web server
 A web server will be deployed to access some of the inverter's current data directly from the browser at `http://localhost:9999` or the port you have configured in the `.env` file.
 ![](Screenshot_003.png)
@@ -68,27 +74,27 @@ folder/
 ```
 
 Check the status:
-```
+```bash
 systemctl status bt.service
 ```
 
 And finally start the service:
-```
+```bash
 systemctl start bt.service
 ```
 
 To check errors:
-```
+```bash
 journalctl -xe
 ```
 
 # Compile and test
-```
+```bash
 cargo run
 ```
 
 # Release build
-```
+```bash
 cargo build --release
 ```
 
