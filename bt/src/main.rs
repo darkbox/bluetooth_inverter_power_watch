@@ -42,6 +42,7 @@ use tokio::{runtime::Handle, signal};
 pub struct AppState {
     inverter: Arc<RwLock<Option<InverterData>>>,
     battery: Arc<RwLock<Option<DynessBatteryStatus>>>,
+    dyness_protocol: Arc<RwLock<usb_can_battery::dyness::DynessCanProtocol>>,
 
     start_time: Instant,
     inverter_last_update: Arc<RwLock<Option<DateTime<Utc>>>>,
@@ -121,6 +122,9 @@ async fn main() {
     let state = AppState {
         inverter: Arc::new(RwLock::new(None)),
         battery: Arc::new(RwLock::new(None)),
+        dyness_protocol: Arc::new(RwLock::new(
+            usb_can_battery::dyness::DynessCanProtocol::default(),
+        )),
         start_time: Instant::now(),
         inverter_last_update: Arc::new(RwLock::new(None)),
         battery_last_update: Arc::new(RwLock::new(None)),
@@ -144,6 +148,7 @@ async fn main() {
             .service(json_response_version)
             .service(json_response_inverter_info)
             .service(json_response_can_battery_info)
+            .service(json_response_can_battery_modules_info)
     })
     .bind((web_server_host.clone(), web_server_port))
     .unwrap()
@@ -177,8 +182,7 @@ async fn main() {
         println!("Starting USB CAN serial interface service...");
         thread::spawn(move || {
             let expire_time = std::time::Duration::from_secs(5 * 60); // 5min
-
-            let mut dyness_protocol = usb_can_battery::dyness::DynessCanProtocol::default();
+            const SUMMARY_FRAME_ID: u32 = 787;
 
             loop {
                 let expire_connection = std::time::SystemTime::now();
@@ -201,7 +205,7 @@ async fn main() {
                         Ok(_) => {
                             if let Some(frame) = decoder.append(serial_buf[0]) {
                                 match frame.id {
-                                    787 => {
+                                    SUMMARY_FRAME_ID => {
                                         if can_debug {
                                             println!("|====>{}", frame.to_string());
                                         }
@@ -238,9 +242,10 @@ async fn main() {
                                             println!("{}", frame.to_string());
                                         }
 
-                                        // TODO: Untested
+                                        // Try to decode any other frame type as a Dyness protocol message
+                                        let mut dyness_protocol =
+                                            state_for_can.dyness_protocol.write().unwrap();
                                         dyness_protocol.decode(&frame);
-                                        println!("{:?}", &dyness_protocol);
                                     }
                                 }
                             }
@@ -368,6 +373,20 @@ async fn json_response_can_battery_info(state: web::Data<AppState>) -> impl Resp
             .body(json),
         None => HttpResponse::ServiceUnavailable().json(json!({
             "error": "No battery data available"
+        })),
+    }
+}
+
+#[get("/api/info/battery/modules")]
+async fn json_response_can_battery_modules_info(state: web::Data<AppState>) -> impl Responder {
+    let guard = state.dyness_protocol.read().unwrap();
+
+    match guard.to_json() {
+        Ok(json) => HttpResponse::Ok()
+            .content_type("application/json")
+            .body(json),
+        Err(err) => HttpResponse::InternalServerError().json(json!({
+            "error": err.to_string()
         })),
     }
 }

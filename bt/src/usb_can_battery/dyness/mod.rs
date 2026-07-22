@@ -1,10 +1,8 @@
 use super::Frame;
-use byteorder::BigEndian;
-use byteorder::ByteOrder;
+use byteorder::{BigEndian, ByteOrder};
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
-use serde::Serialize;
-use std::any::Any;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 #[derive(Debug, Serialize, Clone)]
@@ -204,7 +202,8 @@ impl TryFrom<&Frame> for VoltageAndCurrent {
             voltage: BigEndian::read_u16(&frame.data[..2]) as f32 * 0.01f32,
             current: (BigEndian::read_u16(&frame.data[2..4]) - 4000) as f32 * 0.1f32,
             average_cell_value: BigEndian::read_u16(&frame.data[4..6]),
-            max_discharge_current: (BigEndian::read_u16(&frame.data[6..8]) - 400) as f32 * 0.1f32,
+            max_discharge_current: (BigEndian::read_u16(&frame.data[6..8]) as i32 - 400) as f32
+                * 0.1f32,
         })
     }
 }
@@ -401,80 +400,206 @@ macro_rules! frame_result {
     };
 }
 
-fn try_to_decode_frame(frame: &Frame) -> Result<FrameData, String> {
-    match frame.id {
-        418517265 => frame_result!(frame, 0, CellVoltages0, CellVoltages),
-        418517266 => frame_result!(frame, 0, CellVoltages1, CellVoltages),
-        418517267 => frame_result!(frame, 0, CellVoltages2, CellVoltages),
-        418517268 => frame_result!(frame, 0, CellVoltages3, CellVoltages),
-        418517269 => frame_result!(frame, 0, CellTemps, CellTemps),
-        418517270 => frame_result!(frame, 0, TempsAndCycles, TempsAndCycles),
-        418517271 => frame_result!(frame, 0, ACCChargeKiloWattHours, ACCChargeKiloWattHours),
-        418517281 => frame_result!(frame, 0, VoltageAndCurrent, VoltageAndCurrent),
-        418517282 => frame_result!(frame, 0, CellMinMax, CellMinMax),
-        418517283 => frame_result!(frame, 0, HealthAndMinMaxTemps, HealthAndMinMaxTemps),
-        418517284 => frame_result!(frame, 0, StatusFlags, StatusFlags),
-        418517521 => frame_result!(frame, 1, CellVoltages0, CellVoltages),
-        418517522 => frame_result!(frame, 1, CellVoltages1, CellVoltages),
-        418517523 => frame_result!(frame, 1, CellVoltages2, CellVoltages),
-        418517524 => frame_result!(frame, 1, CellVoltages3, CellVoltages),
-        418517525 => frame_result!(frame, 1, CellTemps, CellTemps),
-        418517526 => frame_result!(frame, 1, TempsAndCycles, TempsAndCycles),
-        418517527 => frame_result!(frame, 1, ACCChargeKiloWattHours, ACCChargeKiloWattHours),
-        418517537 => frame_result!(frame, 1, VoltageAndCurrent, VoltageAndCurrent),
-        418517538 => frame_result!(frame, 1, CellMinMax, CellMinMax),
-        418517539 => frame_result!(frame, 1, HealthAndMinMaxTemps, HealthAndMinMaxTemps),
-        418517540 => frame_result!(frame, 1, StatusFlags, StatusFlags),
-        418517777 => frame_result!(frame, 2, CellVoltages0, CellVoltages),
-        418517778 => frame_result!(frame, 2, CellVoltages1, CellVoltages),
-        418517779 => frame_result!(frame, 2, CellVoltages2, CellVoltages),
-        418517780 => frame_result!(frame, 2, CellVoltages3, CellVoltages),
-        418517781 => frame_result!(frame, 2, CellTemps, CellTemps),
-        418517782 => frame_result!(frame, 2, TempsAndCycles, TempsAndCycles),
-        418517783 => frame_result!(frame, 2, ACCChargeKiloWattHours, ACCChargeKiloWattHours),
-        418517793 => frame_result!(frame, 2, VoltageAndCurrent, VoltageAndCurrent),
-        418517794 => frame_result!(frame, 2, CellMinMax, CellMinMax),
-        418517795 => frame_result!(frame, 2, HealthAndMinMaxTemps, HealthAndMinMaxTemps),
-        418517796 => frame_result!(frame, 2, StatusFlags, StatusFlags),
-        418518033 => frame_result!(frame, 3, CellVoltages0, CellVoltages),
-        418518034 => frame_result!(frame, 3, CellVoltages1, CellVoltages),
-        418518035 => frame_result!(frame, 3, CellVoltages2, CellVoltages),
-        418518036 => frame_result!(frame, 3, CellVoltages3, CellVoltages),
-        418518037 => frame_result!(frame, 3, CellTemps, CellTemps),
-        418518038 => frame_result!(frame, 3, TempsAndCycles, TempsAndCycles),
-        418518039 => frame_result!(frame, 3, ACCChargeKiloWattHours, ACCChargeKiloWattHours),
-        418518049 => frame_result!(frame, 3, VoltageAndCurrent, VoltageAndCurrent),
-        418518050 => frame_result!(frame, 3, CellMinMax, CellMinMax),
-        418518051 => frame_result!(frame, 3, HealthAndMinMaxTemps, HealthAndMinMaxTemps),
-        418518052 => frame_result!(frame, 3, StatusFlags, StatusFlags),
-        _ => Err("Unknown ID frame".to_owned()),
+enum MessageType {
+    CellVoltages0,
+    CellVoltages1,
+    CellVoltages2,
+    CellVoltages3,
+    CellTemps,
+    TempsAndCycles,
+    ACCChargeKiloWattHours,
+    VoltageAndCurrent,
+    CellMinMax,
+    HealthAndMinMaxTemps,
+    StatusFlags,
+}
+
+impl TryFrom<u8> for MessageType {
+    type Error = String;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x11 => Ok(MessageType::CellVoltages0),
+            0x12 => Ok(MessageType::CellVoltages1),
+            0x13 => Ok(MessageType::CellVoltages2),
+            0x14 => Ok(MessageType::CellVoltages3),
+            0x15 => Ok(MessageType::CellTemps),
+            0x16 => Ok(MessageType::TempsAndCycles),
+            0x17 => Ok(MessageType::ACCChargeKiloWattHours),
+            0x21 => Ok(MessageType::VoltageAndCurrent),
+            0x22 => Ok(MessageType::CellMinMax),
+            0x23 => Ok(MessageType::HealthAndMinMaxTemps),
+            0x24 => Ok(MessageType::StatusFlags),
+            _ => Err(format!("Unknown message type: {}", value)),
+        }
     }
 }
 
-#[derive(Debug, Default)]
+fn try_to_decode_frame(frame: &Frame) -> Result<FrameData, String> {
+    // Looks like protocol is working as: base_id + module * 0x100 + message_type
+
+    const BASE_ADDR: u8 = 0x0A;
+    let addr = ((frame.id >> 8) & 0xFF) as u8;
+    if addr < BASE_ADDR {
+        return Err("Invalid module address".into());
+    }
+
+    let module = (addr - BASE_ADDR) as u32;
+    let msg_byte = (frame.id & 0xFF) as u8;
+    let msg = MessageType::try_from(msg_byte)?;
+
+    match msg {
+        MessageType::CellVoltages0 => frame_result!(frame, module, CellVoltages0, CellVoltages),
+        MessageType::CellVoltages1 => frame_result!(frame, module, CellVoltages1, CellVoltages),
+        MessageType::CellVoltages2 => frame_result!(frame, module, CellVoltages2, CellVoltages),
+        MessageType::CellVoltages3 => frame_result!(frame, module, CellVoltages3, CellVoltages),
+        MessageType::CellTemps => frame_result!(frame, module, CellTemps, CellTemps),
+        MessageType::TempsAndCycles => frame_result!(frame, module, TempsAndCycles, TempsAndCycles),
+        MessageType::ACCChargeKiloWattHours => frame_result!(
+            frame,
+            module,
+            ACCChargeKiloWattHours,
+            ACCChargeKiloWattHours
+        ),
+        MessageType::VoltageAndCurrent => {
+            frame_result!(frame, module, VoltageAndCurrent, VoltageAndCurrent)
+        }
+        MessageType::CellMinMax => frame_result!(frame, module, CellMinMax, CellMinMax),
+        MessageType::HealthAndMinMaxTemps => {
+            frame_result!(frame, module, HealthAndMinMaxTemps, HealthAndMinMaxTemps)
+        }
+        MessageType::StatusFlags => frame_result!(frame, module, StatusFlags, StatusFlags),
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ModuleId(pub u8);
+
+impl Into<ModuleId> for u32 {
+    fn into(self) -> ModuleId {
+        ModuleId(self as u8)
+    }
+}
+
+#[derive(Default, Debug, Serialize, Deserialize)]
+pub struct DynessBatteryModule {
+    voltage_and_current: Option<VoltageAndCurrent>,
+    health: Option<HealthAndMinMaxTemps>,
+    status: Option<StatusFlags>,
+    temps_and_cycles: Option<TempsAndCycles>,
+    cell_min_max: Option<CellMinMax>,
+    cell_temps: Option<CellTemps>,
+    cell_voltages: [Option<CellVoltages>; 4],
+    acc_charge_kwh: Option<ACCChargeKiloWattHours>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct DynessCanProtocol {
-    data: Vec<FrameData>,
+    modules: HashMap<ModuleId, DynessBatteryModule>,
+    last_update: Option<DateTime<Utc>>,
 }
 
 impl DynessCanProtocol {
-    fn find_index_of_frame_data(&self, target: &FrameData) -> Option<usize> {
-        for (index, item) in self.data.iter().enumerate() {
-            if item.get_id() == target.get_id() && item.type_id() == target.type_id() {
-                return Some(index);
+    /// Decode a CAN frame and update the internal state of the protocol.
+    pub fn decode(&mut self, frame: &Frame) {
+        let Ok(frame_data) = try_to_decode_frame(frame) else {
+            // Skip unknown frame types
+            return;
+        };
+
+        let module = self.modules.entry(frame_data.get_id().into()).or_default();
+        self.last_update = Some(Utc::now());
+
+        match frame_data {
+            FrameData::VoltageAndCurrent { data, .. } => {
+                module.voltage_and_current = Some(data);
+            }
+
+            FrameData::HealthAndMinMaxTemps { data, .. } => {
+                module.health = Some(data);
+            }
+
+            FrameData::StatusFlags { data, .. } => {
+                module.status = Some(data);
+            }
+
+            FrameData::TempsAndCycles { data, .. } => {
+                module.temps_and_cycles = Some(data);
+            }
+
+            FrameData::CellMinMax { data, .. } => {
+                module.cell_min_max = Some(data);
+            }
+
+            FrameData::CellTemps { data, .. } => {
+                module.cell_temps = Some(data);
+            }
+
+            FrameData::CellVoltages0 { data, .. } => {
+                module.cell_voltages[0] = Some(data);
+            }
+
+            FrameData::CellVoltages1 { data, .. } => {
+                module.cell_voltages[1] = Some(data);
+            }
+
+            FrameData::CellVoltages2 { data, .. } => {
+                module.cell_voltages[2] = Some(data);
+            }
+
+            FrameData::CellVoltages3 { data, .. } => {
+                module.cell_voltages[3] = Some(data);
+            }
+
+            FrameData::ACCChargeKiloWattHours { data, .. } => {
+                module.acc_charge_kwh = Some(data);
             }
         }
-        None
     }
 
-    pub fn decode(&mut self, frame: &Frame) {
-        if let Ok(frame_data) = try_to_decode_frame(frame) {
-            if let Some(index) = self.find_index_of_frame_data(&frame_data) {
-                // A frame with the same ID exists, update it!
-                self.data[index] = frame_data;
-            } else {
-                // This frame do not exists, add it!
-                self.data.push(frame_data);
+    /// Average SOC across all modules.
+    pub fn average_soc(&self) -> Option<f32> {
+        let mut total = 0.0;
+        let mut count = 0;
+
+        for module in self.modules.values() {
+            if let Some(health) = &module.health {
+                total += health.soc as f32;
+                count += 1;
             }
         }
+
+        if count == 0 {
+            None
+        } else {
+            Some(total / count as f32)
+        }
+    }
+
+    /// Number of battery modules currently seen.
+    pub fn module_count(&self) -> usize {
+        self.modules.len()
+    }
+
+    /// Iterator over all discovered modules.
+    #[allow(dead_code)]
+    pub fn modules(&self) -> impl Iterator<Item = (&ModuleId, &DynessBatteryModule)> {
+        self.modules.iter()
+    }
+
+    /// Serialize the current state of the protocol to JSON.
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        // Include the average SOC and module count in the JSON output
+        let mut json_map = serde_json::Map::new();
+        json_map.insert(
+            "average_soc".to_string(),
+            serde_json::json!(self.average_soc()),
+        );
+        json_map.insert(
+            "module_count".to_string(),
+            serde_json::json!(self.module_count()),
+        );
+        json_map.insert("modules".to_string(), serde_json::json!(self.modules));
+        serde_json::to_string(&json_map)
     }
 }

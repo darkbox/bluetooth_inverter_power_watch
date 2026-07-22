@@ -1,13 +1,11 @@
 pub mod dyness;
 
-use std::slice::Iter;
-
+use crate::inverter::bt::InfluxData;
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use futures::stream;
 use influxdb2::models::DataPoint;
 use serde::{Deserialize, Serialize};
-
-use crate::inverter::bt::InfluxData;
+use std::slice::Iter;
 
 #[derive(Debug)]
 pub struct Frame {
@@ -221,10 +219,12 @@ pub struct DynessBatteryStatus {
 }
 
 impl DynessBatteryStatus {
+    /// Serialize summary battery status into JSON string
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
     }
 
+    /// Tries to create a Dyness battery status from a standard frame
     pub fn from(value: Frame) -> Result<Self, String> {
         // Example package data [13, B1, 00, 61, 00, A0, 50, 64]
         // 64  48      9f 00   37 01       d2 13
@@ -248,6 +248,7 @@ impl DynessBatteryStatus {
         })
     }
 
+    /// Save the battery status to InfluxDB.
     pub async fn save_to_db(&self, influx_data: InfluxData) {
         let points = self.get_data_points();
         let client = influx_data.create_client();
